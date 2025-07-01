@@ -43,15 +43,16 @@ class DashboardController extends Controller
     $lowStock = Product::where('stock', '<', 50)
         ->orderBy('stock', 'asc')
         ->get();
-
-    return view('inventory.dashboard', compact(
-        'todaySales',
-        'totalProducts',
-        'totalProfit',
-        'totalSoldQty',
-        'soldDetails',
-        'lowStock'
-    ));
+$products = Product::orderBy('name')->get();
+  return view('inventory.dashboard', compact(
+    'todaySales',
+    'totalProducts',
+    'totalProfit',
+    'totalSoldQty',
+    'soldDetails',
+    'lowStock',
+    'products' // ✅ <-- Add this line
+));
 }
 
    public function chartData($type)
