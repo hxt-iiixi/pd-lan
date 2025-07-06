@@ -11,17 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-           Schema::create('sales_items', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('sale_id')->constrained()->onDelete('cascade');
-                $table->foreignId('product_id')->constrained()->onDelete('cascade');
-                $table->integer('quantity');
-                $table->string('discount_type')->default('NONE'); // SC, PWD, NONE
-                $table->decimal('price_per_unit', 10, 2); // existing
-                $table->decimal('total_price', 10, 2);     // ✅ Add this line here
-                $table->timestamps();
-            });
-
+            Schema::create('sales_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('sale_id')->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->integer('quantity');
+            $table->decimal('price_per_unit', 10, 2);
+            $table->timestamps();
+        });
 
     }
 

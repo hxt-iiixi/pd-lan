@@ -26,13 +26,5 @@ class Sale extends Model
     {
         $this->attributes['discount_type'] = strtoupper($value ?? 'NONE');
     }
-    public function items()
-    {
-        return $this->hasMany(SalesItem::class);
-    }
-    public function salesItems()
-    {
-        return $this->hasMany(SalesItem::class);
-    }
 
 }

@@ -2,9 +2,6 @@
 @section('title', 'Dashboard')
 @section('content')
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <style>
     /* ===============================
    DASHBOARD LAYOUT & CARDS
@@ -667,9 +664,29 @@ tr.highlight-row {
         <div class="log-sale" style="width: 30%;">
             <div class="sales-form">
                 <h4>Log a Sale</h4>
-               <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logSaleModal">
-                    Log a Sale
-                </button>
+                <form id="logSaleForm">
+                    @csrf
+
+                    <label for="product_id">Select Product:</label>
+                    <select name="product_id" required>
+                        @foreach(App\Models\Product::all() as $product)
+                            <option value="{{ $product->id }}">{{ $product->name }} (Stock: {{ $product->stock }})</option>
+                        @endforeach
+                    </select>
+
+                    <label for="quantity">Quantity:</label>
+                    <input type="number" name="quantity" min="1" required>
+
+                    <!-- ✅ Discount Dropdown -->
+                    <label for="discount_type">Discount Type:</label>
+                    <select name="discount_type" id="discount_type" class="form-select">
+                        <option value="none">None</option>
+                        <option value="SC">Senior Citizen (20%)</option>
+                        <option value="PWD">PWD (20%)</option>
+                    </select>
+
+                    <button type="submit" class="button-fill green-button">Log Sale</button>
+                </form>
             </div>
         </div>
         <div class="sales-log" style="width: 70%;">
@@ -691,21 +708,24 @@ tr.highlight-row {
                             </tr>
                         </thead>
                         <tbody>
-                         @foreach ($todaySales as $item)
-                            <tr>
-                                <td>{{ $item->sale->created_at->timezone('Asia/Manila')->format('h:i A') }}</td>
-                                <td>{{ $item->product->name ?? 'Deleted Product' }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>{{ $item->discount_type ?? 'NONE' }}</td>
-                                <td>₱{{ number_format($item->total_price, 2) }}</td>
-                                <td class="action-cell">
-                                    <button class="dots-btn"
-                                        onclick="openEditModal({{ $item->id }}, '{{ $item->product->name ?? 'Deleted' }}', {{ $item->product_id }}, {{ $item->quantity }})">
-                                        ⋮
-                                    </button>
-                                </td>
-                            </tr>
-                        @endforeach
+                            @forelse($todaySales as $sale)
+                                <tr>
+                                    <td>{{ $sale->created_at->timezone('Asia/Manila')->format('h:i A') }}</td>
+                                    <td>{{ $sale->product->name ?? 'Deleted Product' }}</td>
+                                    <td>{{ $sale->quantity }}</td>
+                                    <td>{{ $sale->formatted_discount }}</td>
+                                    <td>₱{{ number_format($sale->total_price, 2) }}</td>
+                                    <td class="action-cell">
+                                        <button class="dots-btn"
+                                            onclick="openEditModal({{ $sale->id }}, '{{ $sale->product->name ?? 'Deleted' }}', {{ $sale->product_id }}, {{ $sale->quantity }})"
+                                        >⋮</button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr id="noSalesRow">
+                                    <td colspan="6" style="text-align: center;">No sales recorded today.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -728,57 +748,6 @@ tr.highlight-row {
 
 <div id="toast" class="toast-message" style="display: none;"></div>
 
-<!-- Log a Sale Modal -->
-<div class="modal fade" id="logSaleModal" tabindex="-1" aria-labelledby="logSaleModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form method="POST" action="{{ route('sales.store') }}">
-        @csrf
-        <div class="modal-header">
-          <h5 class="modal-title" id="logSaleModalLabel">Log a Sale</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-
-          <table class="table table-bordered">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Discount</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach ($products as $product)
-              <tr>
-                <td>
-                  {{ $product->name }}
-                  <input type="hidden" name="product_id[]" value="{{ $product->id }}">
-                </td>
-                <td>
-                  <input type="number" name="quantity[]" class="form-control" min="0" value="0" />
-                </td>
-                <td>
-                  <select name="discount_type[]" class="form-control">
-                    <option value="NONE">None</option>
-                    <option value="SC">SC</option>
-                    <option value="PWD">PWD</option>
-                  </select>
-                </td>
-              </tr>
-              @endforeach
-            </tbody>
-          </table>
-
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Submit Sale</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <!-- Sold Details Modal -->
 <div id="soldModal" class="modal">
@@ -1045,186 +1014,79 @@ $('#confirmDeleteBtn').on('click', function () {
     // AJAX submit handler
     let saleCount = {{ $todaySales->count() }};
 
-$.ajax({
-    url: "{{ route('sales.store') }}",
-    method: "POST",
-    contentType: "application/json",
-    data: JSON.stringify({
-        items: [
-            {
-                product_id: form.find('select[name="product_id"]').val(),
-                quantity: form.find('input[name="quantity"]').val(),
-                discount_type: form.find('select[name="discount_type"]').val()
-            }
-        ]
-    }),
-    success: function(response) {
-        form[0].reset();
-        button.prop('disabled', false).text('Log Sale');
-
-        if (saleCount === 0) {
-            location.reload();
-            return;
-        }
-
-        saleCount++;
-
-        response.sales.forEach(sale => {
-            let discountLabel = 'None';
-            if (sale.discount_type === 'SC') discountLabel = 'Senior Citizen (20%)';
-            else if (sale.discount_type === 'PWD') discountLabel = 'PWD (20%)';
-
-            const row = `
-                <tr class="highlight-row">
-                    <td>${sale.time}</td>
-                    <td>${sale.product}</td>
-                    <td>${sale.quantity}</td>
-                    <td>${discountLabel}</td>
-                    <td>₱${sale.total}</td>
-                    <td class="action-cell">
-                        <button class="dots-btn"
-                            onclick="openEditModal(${sale.id}, '${sale.product}', ${sale.product_id}, ${sale.quantity})"
-                        >⋮</button>
-                    </td>
-                </tr>
-            `;
-            $('table.table tbody').prepend(row);
-        });
-        $('.highlight-row').hide().fadeIn(600).removeClass('highlight-row');
-
-        $('#total-profit').text('₱' + response.updatedTotalProfit);
-        $('#total-sold').text(response.updatedTotalSold);
-
-        const updatedOption = $(`#logSaleForm select[name="product_id"] option[value="${response.product_id}"]`);
-        if (updatedOption.length) {
-            updatedOption.text(`${response.product} (Stock: ${response.updatedStock})`);
-        }
-        
-        const toast = $('#toast');
-        toast.html(response.message).css('display', 'block').addClass('show');
-        setTimeout(() => {
-            toast.removeClass('show');
-            setTimeout(() => toast.css('display', 'none'), 400);
-        }, 3000);
-    },
-    error: function(err) {
-        button.prop('disabled', false).text('Log Sale');
-        alert('Error logging sale. Please check stock or try again.');
-        console.log(err.responseJSON); // helpful for debugging
-    }
-});
-$('#addItem').on('click', function () {
-    const clone = $('.sale-item:first').clone();
-    clone.find('input, select').val('');
-    $('#sale-items-container').append(clone);
-});
-
-$(document).on('click', '.remove-item', function () {
-    if ($('.sale-item').length > 1) {
-        $(this).closest('.sale-item').remove();
-    }
-});
-
-
-
-
-$('#logSaleForm').on('submit', function (e) {
+$('#logSaleForm').on('submit', function(e) {
     e.preventDefault();
 
     const form = $(this);
-    const button = form.find('button[type="submit"]');
+    const button = form.find('button');
     button.prop('disabled', true).text('Logging...');
-
-    const items = [];
-    form.find('.sale-item').each(function () {
-        const product_id = $(this).find('select[name="product_id[]"]').val();
-        const quantity = $(this).find('input[name="quantity[]"]').val();
-        const discount_type = $(this).find('select[name="discount_type[]"]').val();
-        if (product_id && quantity) {
-            items.push({ product_id, quantity, discount_type });
-        }
-    });
 
     $.ajax({
         url: "{{ route('sales.store') }}",
         method: "POST",
-        data: {
-            _token: '{{ csrf_token() }}',
-            items: items
-        },
-        success: function (response) {
+        data: form.serialize(),
+        success: function(response) {
             form[0].reset();
             button.prop('disabled', false).text('Log Sale');
-            // TODO: update UI (reload table, toast, etc)
+
+            if (saleCount === 0) {
+                // 🟢 First sale today → Reload
+                location.reload();
+                return;
+            }
+
+            saleCount++; // increment for next calls
+
+            // Build and prepend new row
+            let discountLabel = 'None';
+            if (response.discount_type === 'SC') discountLabel = 'Senior Citizen (20%)';
+            else if (response.discount_type === 'PWD') discountLabel = 'PWD (20%)';
+
+            const newRow = `
+                <tr class="highlight-row">
+                    <td>${response.time}</td>
+                    <td>${response.product}</td>
+                    <td>${response.quantity}</td>
+                    <td>${discountLabel}</td>
+                    <td>₱${response.total}</td>
+                    <td class="action-cell">
+                        <button class="dots-btn"
+                            onclick="openEditModal(${response.id}, '${response.product}', ${response.product_id}, ${response.quantity})"
+                        >⋮</button>
+                    </td>
+                </tr>
+            `;
+
+            $('table.table tbody').prepend(newRow);
+            $('.highlight-row').hide().fadeIn(600).removeClass('highlight-row');
+
+            // Update totals
+            $('#total-profit').text('₱' + response.updatedTotalProfit);
+            $('#total-sold').text(response.updatedTotalSold);
+
+            // Update stock in dropdown
+            const updatedOption = $(`#logSaleForm select[name="product_id"] option[value="${response.product_id}"]`);
+            if (updatedOption.length) {
+                updatedOption.text(`${response.product} (Stock: ${response.updatedStock})`);
+            }
+
+            // Toast
+            const toast = $('#toast');
+            toast.html(response.message).css('display', 'block').addClass('show');
+            setTimeout(() => {
+                toast.removeClass('show');
+                setTimeout(() => toast.css('display', 'none'), 400);
+            }, 3000);
         },
-        error: function (err) {
+        error: function(err) {
             button.prop('disabled', false).text('Log Sale');
-            console.log('Error:', err);
-            alert('Failed to log sale.');
+            alert('Error logging sale. Please check stock or try again.');
         }
     });
 });
 
-
-
-
-
 </script>
-<script>
-document.getElementById('logSaleBtn').addEventListener('click', function () {
-    const productRows = document.querySelectorAll('.product-row');
-    const productIds = [];
-    const quantities = [];
-    const discountTypes = [];
 
-    productRows.forEach(row => {
-        const productId = row.getAttribute('data-product-id');
-        const quantity = parseInt(row.querySelector('.quantity-input').value);
-        const discount = row.querySelector('.discount-select').value;
-
-        if (quantity > 0) {
-            productIds.push(productId);
-            quantities.push(quantity);
-            discountTypes.push(discount);
-        }
-    });
-
-    if (productIds.length === 0) {
-        alert('Please enter quantity for at least one product.');
-        return;
-    }
-
-    fetch("{{ route('sales.store') }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json", // Ensure Laravel doesn't redirect
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            product_id: productIds,
-            quantity: quantities,
-            discount_type: discountTypes
-        })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            alert("Sale logged successfully!");
-            location.reload();
-        } else {
-            alert("Error: " + (data.message || 'Unknown error'));
-        }
-    })
-    .catch(err => {
-        alert("Unexpected error: " + err.message);
-        console.error(err);
-    });
-});
-</script>
 <script>
 let chart;
 const ctx = document.getElementById('analyticsChart').getContext('2d');
@@ -1355,90 +1217,6 @@ $(document).ready(function () {
 });
 
 </script>
-<script>
-const items = [];
-
-function addItemToCart(productId, quantity, discountType) {
-    items.push({
-        product_id: productId,
-        quantity: quantity,
-        discount_type: discountType
-    });
-
-    updateCartPreviewUI(); // Optional: Remove if unused
-}
-
-document.getElementById('submit-sale-btn').addEventListener('click', function () {
-    if (items.length === 0) {
-        alert("Add at least one item");
-        return;
-    }
-
-    fetch('/sales/store', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({ items })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert('Sale logged!');
-            location.reload();
-        } else {
-            alert(data.error || 'Something went wrong.');
-        }
-    });
-});
-
-function updateCartPreviewUI() {
-    console.log('Cart:', items); // Optional
-}
-</script>
-<script>
-document.getElementById('addItem').addEventListener('click', function () {
-    const container = document.getElementById('sale-items-container');
-
-    const newItem = document.createElement('div');
-    newItem.classList.add('sale-item', 'row', 'mb-2');
-    newItem.innerHTML = `
-        <div class="col">
-            <select name="product_id[]" class="form-select" required>
-                <option value="" disabled selected>Select product</option>
-                @foreach ($products as $product)
-                    <option value="{{ $product->id }}">
-                        {{ $product->name }} (Stock: {{ $product->stock }})
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col">
-            <input type="number" name="quantity[]" class="form-control" placeholder="Qty" min="1" required>
-        </div>
-        <div class="col">
-            <select name="discount_type[]" class="form-select">
-                <option value="NONE">None</option>
-                <option value="SC">Senior Citizen</option>
-                <option value="PWD">PWD</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="button" class="btn btn-danger remove-item">✖</button>
-        </div>
-    `;
-    container.appendChild(newItem);
-});
-
-// 🗑 Remove item
-document.addEventListener('click', function (e) {
-    if (e.target.classList.contains('remove-item')) {
-        e.target.closest('.sale-item').remove();
-    }
-});
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 
 @endsection

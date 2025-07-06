@@ -31,9 +31,4 @@ class InventoryController extends Controller
 
         return view('inventory.history', compact('dailySummary'));
     }
-    public function createSale()
-    {
-        $products = Product::all();
-        return view('inventory.sales', compact('products'));
-    }
 }

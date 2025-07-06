@@ -8,18 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class SalesItem extends Model
 {
     protected $fillable = [
-    'sale_id', 'product_id', 'quantity', 'price_per_unit', 'total_price', 'discount_type'
+        'sales_invoice_id', 'drug_name', 'brand', 'quantity', 'unit_price', 'total_price'
     ];
 
-
-    public function sale()
+    public function invoice()
     {
-        return $this->belongsTo(Sale::class);
-    }
-
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(SalesInvoice::class);
     }
 }
 

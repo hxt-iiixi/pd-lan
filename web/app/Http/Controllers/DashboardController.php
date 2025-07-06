@@ -11,53 +11,49 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-  public function index()
-    {
-        $today = Carbon::today();
+   public function index()
+{
+    $today = Carbon::today();
 
-        // ✅ Use sale.created_at instead of sales_items.created_at
-        $todaySales = SalesItem::with('product', 'sale')
-            ->whereHas('sale', function ($query) use ($today) {
-                $query->whereDate('created_at', $today);
-            })
-            ->orderByDesc('created_at')
-            ->get();
+    // 🔁 Get today's Sales Items (multi-product sales)
+    $todaySales = SalesItem::with(['product', 'sale'])
+        ->whereDate('created_at', $today)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
-        // 🔢 Total products
-        $totalProducts = Product::count();
+    // 🔢 Total products
+    $totalProducts = Product::count();
 
-        // 💰 Profit and quantity
-        $totalProfit = $todaySales->sum('total_price');
-        $totalSoldQty = $todaySales->sum('quantity');
+    // 💰 Total profit and quantity from SalesItems
+    $totalProfit = SalesItem::whereDate('created_at', $today)->sum('total_price');
+    $totalSoldQty = SalesItem::whereDate('created_at', $today)->sum('quantity');
 
-        // 🔝 Most sold products today
-        $soldDetails = $todaySales
-            ->groupBy('product_id')
-            ->map(function ($items) {
-                return (object)[
-                    'product' => $items->first()->product,
-                    'total_quantity' => $items->sum('quantity')
-                ];
-            })
-            ->sortByDesc('total_quantity');
+    // 🔝 Most sold products today
+    $soldDetails = $todaySales
+        ->groupBy('product_id')
+        ->map(function ($group) {
+            return (object)[
+                'product' => $group->first()->product,
+                'total_quantity' => $group->sum('quantity')
+            ];
+        })
+        ->sortByDesc('total_quantity');
 
-        // 📉 Low stock
-        $lowStock = Product::where('stock', '<', 50)
-            ->orderBy('stock', 'asc')
-            ->get();
-
-        $products = Product::orderBy('name')->get();
-
-        return view('inventory.dashboard', compact(
-            'todaySales',
-            'totalProducts',
-            'totalProfit',
-            'totalSoldQty',
-            'soldDetails',
-            'lowStock',
-            'products'
-        ));
-    }
+    // 📉 Low stock products
+    $lowStock = Product::where('stock', '<', 50)
+        ->orderBy('stock', 'asc')
+        ->get();
+$products = Product::orderBy('name')->get();
+  return view('inventory.dashboard', compact(
+    'todaySales',
+    'totalProducts',
+    'totalProfit',
+    'totalSoldQty',
+    'soldDetails',
+    'lowStock',
+    'products' // ✅ <-- Add this line
+));
+}
 
    public function chartData($type)
     {
