@@ -4,104 +4,140 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Sale;
 use Illuminate\Http\Request;
-
+use App\Models\SalesItem;
+use Illuminate\Support\Facades\DB;
 class SaleController extends Controller
 {
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'discount_type' => 'nullable|string'
+            'product_id' => 'required|array',
+            'quantity' => 'required|array',
+            'discount_type' => 'required|array', // each discount type per item
         ]);
 
-        $product = Product::findOrFail($request->product_id);
+        DB::beginTransaction();
 
-        if ($product->stock < $request->quantity) {
-            return response()->json(['error' => 'Not enough stock'], 400);
+        try {
+            $grandTotal = 0;
+
+            // Create the parent sale record
+            $sale = Sale::create([
+                'discount_type' => 'NONE', // optional; handled per item
+                'created_at' => now(),
+            ]);
+
+            foreach ($request->product_id as $index => $productId) {
+                $product = Product::find($productId);
+
+                if (!$product) continue;
+
+                $quantity = (int) $request->quantity[$index];
+                if ($quantity <= 0) continue;
+
+                $discountType = $request->discount_type[$index] ?? 'NONE';
+                $pricePerUnit = $product->price;
+
+                // Apply item-level discount (if needed)
+                $discountMultiplier = in_array($discountType, ['SC', 'PWD']) ? 0.8 : 1.0;
+                $finalUnitPrice = $pricePerUnit * $discountMultiplier;
+                $totalPrice = $finalUnitPrice * $quantity;
+
+                // Save sale item
+                SalesItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'price_per_unit' => $finalUnitPrice,
+                    'total_price' => $totalPrice,
+                    'discount_type' => $discountType,
+                ]);
+
+                // Decrease stock
+                $product->stock -= $quantity;
+                $product->save();
+
+                // Add to grand total
+                $grandTotal += $totalPrice;
+            }
+
+            // Update parent sale totals
+            $sale->update([
+                'total_price' => $grandTotal,
+                'discount_amount' => 0, // already factored in per item
+                'net_total' => $grandTotal,
+            ]);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Sale recorded successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
-
-        $unitPrice = $product->selling_price;
-        $qty = $request->quantity;
-
-        // Normalize discount type
-       $discountType = strtoupper($request->discount_type ?? 'NONE');
-        $discountType = in_array($discountType, ['SC', 'PWD']) ? $discountType : 'NONE';
-        $discountMultiplier = $discountType !== 'NONE' ? 0.8 : 1.0;
-
-        $total = $unitPrice * $qty * $discountMultiplier;
-
-        $sale = Sale::create([
-            'product_id' => $product->id,
-            'quantity' => $qty,
-            'total_price' => $total,
-            'discount_type' => $discountType,
-        ]);
-
-        $product->decrement('stock', $qty);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sale logged successfully.',
-            'id' => $sale->id,
-            'product_id' => $product->id,
-            'product' => $product->name,
-            'quantity' => $qty,
-            'discount_type' => $discountType,
-            'total' => number_format($total, 2),
-            'time' => now()->timezone('Asia/Manila')->format('h:i A'),
-            'updatedStock' => $product->stock,
-            'updatedTotalProfit' => number_format(Sale::sum('total_price'), 2),
-            'updatedTotalSold' => Sale::sum('quantity'),
-        ]);
     }
 
     public function update(Request $request)
     {
         $request->validate([
-            'sale_id' => 'required|exists:sales,id',
+            'item_id' => 'required|exists:sales_items,id',
             'quantity' => 'required|integer|min:1',
             'original_quantity' => 'required|integer|min:1'
         ]);
 
-        $sale = Sale::findOrFail($request->sale_id);
-        $product = Product::findOrFail($sale->product_id);
+        $item = \App\Models\SalesItem::with('product')->findOrFail($request->item_id);
+        $product = $item->product;
 
+        // Restore original stock first
         $product->increment('stock', $request->original_quantity);
 
+        // Check for sufficient stock for new quantity
         if ($product->stock < $request->quantity) {
             return response()->json(['error' => 'Not enough stock to update.'], 400);
         }
 
+        // Apply new quantity
         $product->decrement('stock', $request->quantity);
 
-        $sale->update([
+        $item->update([
             'quantity' => $request->quantity,
-            'total_price' => $product->selling_price * $request->quantity,
         ]);
 
-        return response()->json(['success' => 'Sale updated.']);
+        // Recalculate total for parent sale
+        $sale = $item->sale;
+        $totalPrice = 0;
+        $totalQuantity = 0;
+
+        foreach ($sale->items as $i) {
+            $unitPrice = $i->product->selling_price;
+            $discountMultiplier = $i->discount_type !== 'NONE' ? 0.8 : 1.0;
+            $totalPrice += $unitPrice * $i->quantity * $discountMultiplier;
+            $totalQuantity += $i->quantity;
+        }
+
+        $sale->update([
+            'total_price' => $totalPrice,
+            'quantity' => $totalQuantity,
+        ]);
+
+        return response()->json(['success' => 'Sale item updated.']);
     }
 
     public function destroy(Request $request)
     {
-        $sale = Sale::findOrFail($request->sale_id);
-        $product = Product::findOrFail($sale->product_id);
+        $sale = Sale::with('items')->findOrFail($request->sale_id);
 
-        // Increment stock
-        $product->increment('stock', $sale->quantity);
+        // Increment stock for each product in the sale
+        foreach ($sale->items as $item) {
+            $item->product->increment('stock', $item->quantity);
+        }
 
-        // Store sale in session before deletion
-        session(['last_deleted_sale' => $sale->toArray()]);
-
+        session(['last_deleted_sale' => $sale->toArray() + ['items' => $sale->items->toArray()]]);
         $sale->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Sale deleted successfully.',
-            'sale_id' => $sale->id,
-            'product_id' => $product->id,
-            'updatedStock' => $product->stock
+            'sale_id' => $sale->id
         ]);
     }
 
@@ -159,27 +195,42 @@ class SaleController extends Controller
             return response()->json(['success' => false, 'message' => 'No sale to restore.']);
         }
 
-        $sale = new Sale();
-        $sale->product_id = $lastDeleted['product_id'];
-        $sale->quantity = $lastDeleted['quantity'];
-        $sale->discount_type = $lastDeleted['discount_type'];
-        $sale->total_price = $lastDeleted['total_price'];
-        $sale->created_at = now();
-        $sale->updated_at = now();
-        $sale->save();
+        DB::beginTransaction();
 
+        try {
+            // Recreate the parent sale
+            $sale = Sale::create([
+                'discount_type' => $lastDeleted['discount_type'] ?? 'NONE',
+                'total_price' => $lastDeleted['total_price'],
+                'discount_amount' => $lastDeleted['discount_amount'],
+                'net_total' => $lastDeleted['net_total'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        // Restore stock
-        $product = Product::find($sale->product_id);
-        $product->stock -= $sale->quantity;
-        $product->save();
+            // Recreate each sales item
+            foreach ($lastDeleted['items'] as $item) {
+                SalesItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'price_per_unit' => $item['price_per_unit'],
+                    'total_price' => $item['total_price'],
+                    'discount_type' => $item['discount_type'],
+                ]);
 
-        session()->forget('last_deleted_sale');
+                // Decrease stock accordingly
+                Product::find($item['product_id'])?->decrement('stock', $item['quantity']);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Sale restored successfully.'
-        ]);
+            DB::commit();
+            session()->forget('last_deleted_sale');
+
+            return response()->json(['success' => true, 'message' => 'Sale restored successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to restore sale.', 'error' => $e->getMessage()]);
+        }
     }
 
 

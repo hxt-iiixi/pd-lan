@@ -64,7 +64,7 @@ class AuthController extends Controller
         ]);
 
 
-        return redirect()->route('login')->with('success', 'Account created successfully. Please login.');
+        return redirect()->route('login')->with('success', 'Account created successfully. Please wait for approval.');
     }
 
    // LOGOUT

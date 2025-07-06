@@ -10,10 +10,7 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity');
-            $table->decimal('total_price', 10, 2);
-            $table->timestamps();
+            $table->timestamps(); // Only timestamps here — no product_id, quantity, total_price
         });
     }
 
