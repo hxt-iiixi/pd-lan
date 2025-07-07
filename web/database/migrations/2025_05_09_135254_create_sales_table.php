@@ -6,16 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+   public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity');
-            $table->decimal('total_price', 10, 2);
+            $table->decimal('total_price', 10, 2)->nullable(); // Nullable so it can be updated later
+            $table->string('discount_type')->default('NONE');
             $table->timestamps();
         });
     }
+
 
     public function down(): void
     {

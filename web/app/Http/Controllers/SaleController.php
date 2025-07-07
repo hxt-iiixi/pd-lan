@@ -4,57 +4,118 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Sale;
 use Illuminate\Http\Request;
-
+use App\Models\SalesItem;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 class SaleController extends Controller
 {
-    public function store(Request $request)
+ public function store(Request $request)
     {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'discount_type' => 'nullable|string'
-        ]);
-
-        $product = Product::findOrFail($request->product_id);
-
-        if ($product->stock < $request->quantity) {
-            return response()->json(['error' => 'Not enough stock'], 400);
+        // Convert flat arrays into structured items array
+        $items = [];
+        foreach ($request->product_id as $index => $productId) {
+            $items[] = [
+                'product_id' => $productId,
+                'quantity' => $request->quantity[$index],
+            ];
         }
 
-        $unitPrice = $product->selling_price;
-        $qty = $request->quantity;
+        // Inject the 'items' array into the request for validation
+        $request->merge(['items' => $items]);
 
-        // Normalize discount type
-       $discountType = strtoupper($request->discount_type ?? 'NONE');
-        $discountType = in_array($discountType, ['SC', 'PWD']) ? $discountType : 'NONE';
-        $discountMultiplier = $discountType !== 'NONE' ? 0.8 : 1.0;
-
-        $total = $unitPrice * $qty * $discountMultiplier;
-
-        $sale = Sale::create([
-            'product_id' => $product->id,
-            'quantity' => $qty,
-            'total_price' => $total,
-            'discount_type' => $discountType,
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'discount_type' => 'nullable|in:NONE,SENIOR,PWD'
         ]);
 
-        $product->decrement('stock', $qty);
+        DB::beginTransaction();
+        try {
+            $totalBeforeDiscount = 0;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Sale logged successfully.',
-            'id' => $sale->id,
-            'product_id' => $product->id,
-            'product' => $product->name,
-            'quantity' => $qty,
-            'discount_type' => $discountType,
-            'total' => number_format($total, 2),
-            'time' => now()->timezone('Asia/Manila')->format('h:i A'),
-            'updatedStock' => $product->stock,
-            'updatedTotalProfit' => number_format(Sale::sum('total_price'), 2),
-            'updatedTotalSold' => Sale::sum('quantity'),
-        ]);
+            // Create Sale
+            $sale = Sale::create([
+                'discount_type' => $request->discount_type ?? 'NONE'
+            ]);
+
+            $itemsForResponse = []; // Collect info for all items
+
+                foreach ($request->items as $item) {
+                    $product = Product::findOrFail($item['product_id']);
+                    $qty = $item['quantity'];
+                    $subtotal = $product->selling_price * $qty;
+                    $totalBeforeDiscount += $subtotal;
+
+                    // ✅ Calculate profit here
+                    $profit = ($product->selling_price - $product->supplier_price) * $qty;
+
+                    // Create the sale item
+                    SalesItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $product->id,
+                        'quantity' => $qty,
+                        'total_price' => $subtotal,
+                        // Optional: You can add 'profit' => $profit here if your sales_items table has a profit column
+                    ]);
+
+                    $product->decrement('stock', $qty);
+
+                    // Add to response
+                    $itemsForResponse[] = [
+                        'product' => $product->name,
+                        'product_id' => $product->id,
+                        'quantity' => $qty,
+                        'subtotal' => number_format($subtotal, 2),
+                        'profit' => number_format($profit, 2) // Optional: include this in response
+                    ];
+                }
+
+           if (in_array($request->discount_type, ['SENIOR', 'PWD'])) {
+                $discount = $totalBeforeDiscount * 0.20;
+            } else {
+                $discount = 0;
+            }
+
+            $finalTotal = $totalBeforeDiscount - $discount;
+
+            $sale->update([
+                'total_price' => round($finalTotal, 2),
+                'discount_type' => $request->discount_type,
+            ]);
+            DB::commit();
+               if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Sale logged successfully',
+                        'sale_id' => $sale->id,
+                        'sale_date' => $sale->created_at->format('M d, Y h:i A'),
+                        'discount_type' => $sale->discount_type ?? 'NONE',
+                        'total_price' => number_format($sale->total_price, 2),
+                        'items' => $itemsForResponse,
+                        'updatedTotalProfit' => Sale::sum('total_price'),
+                        'updatedTotalSold' => SalesItem::sum('quantity'),
+                    ]);
+                }
+
+
+            return redirect()->back()->with('success', 'Sale logged successfully.');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error("Sale store failed: " . $e->getMessage());
+
+                if ($request->ajax()) {
+                    return response()->json(['error' => $e->getMessage()], 500); // <- SHOW actual error
+                }
+
+                return redirect()->back()->with('error', 'Failed to log sale.');
+            }
     }
+
+
+
+
 
     public function update(Request $request)
     {

@@ -88,3 +88,4 @@ Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'appro
 Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'approve'])->name('admin.accounts.approve');
 Route::delete('/admin/accounts/reject/{user}', [AccountsController::class, 'reject'])->name('admin.accounts.reject');
 Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.index');
+Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');

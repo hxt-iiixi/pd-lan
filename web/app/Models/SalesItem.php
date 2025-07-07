@@ -1,6 +1,5 @@
 <?php
 
-// app/Models/SalesItem.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,12 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 class SalesItem extends Model
 {
     protected $fillable = [
-        'sales_invoice_id', 'drug_name', 'brand', 'quantity', 'unit_price', 'total_price'
+        'sale_id',     // FK to sales table
+        'product_id',  // FK to products table
+        'quantity',
+        'total_price'
     ];
 
-    public function invoice()
+    public function product()
     {
-        return $this->belongsTo(SalesInvoice::class);
+        return $this->belongsTo(Product::class);
+    }
+
+    public function sale()
+    {
+        return $this->belongsTo(Sale::class);
     }
 }
-

@@ -2,6 +2,7 @@
 @section('title', 'Dashboard')
 @section('content')
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
     /* ===============================
    DASHBOARD LAYOUT & CARDS
@@ -522,6 +523,26 @@ tr.highlight-row {
     background-color: #ef4444;
     color: white;
 }
+.custom-log-modal-content {
+  border-radius: 1rem;
+}
+
+.custom-log-modal-header {
+  background-color: #198754; /* Bootstrap success green or your primary */
+  border-bottom: none;
+}
+
+.custom-log-modal-body {
+  background-color: #f8f9fa;
+}
+
+.custom-log-modal-content .modal-title {
+  font-size: 1.25rem;
+}
+
+.custom-log-modal-content .btn-close {
+  opacity: 1;
+}
 
 /* ===============================
    TOAST MESSAGE
@@ -623,7 +644,98 @@ tr.highlight-row {
         width: 100% !important;
     }
 }
+/* === LOG SALE MODAL STYLING === */
+#logSaleModal .custom-log-modal-content {
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: none;
+  background-color: #ffffff;
+  padding: 0;
+  overflow: hidden;
+}
 
+#logSaleModal .custom-log-modal-header {
+  background: linear-gradient(to right, #198754, #28a745);
+  padding: 1rem 1.5rem;
+  border-bottom: none;
+  color: #fff;
+}
+
+#logSaleModal .custom-log-modal-body {
+  background-color: #f8f9fa;
+  padding: 2rem;
+}
+
+#logSaleModal .item-row {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
+}
+
+#logSaleModal .form-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+#logSaleModal .form-control,
+#logSaleModal .form-select {
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+#logSaleModal .remove-row {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0.3rem;
+}
+
+#logSaleModal .remove-row:hover {
+  background: #bb2d3b;
+}
+
+#logSaleModal #addRow {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+}
+
+#logSaleModal .btn-success {
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+#logSaleModal .text-end {
+  margin-top: 1.5rem;
+}
+    #itemRows .card {
+        border-radius: 12px;
+    }
+
+    #itemRows .btn-danger {
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+    }
+
+    #itemRows select,
+    #itemRows input {
+        box-shadow: none !important;
+    }
+/* Modal width */
+@media (min-width: 768px) {
+  #logSaleModal .modal-dialog {
+    max-width: 720px;
+  }
+}
 </style>
 
 <div class="dashboard-grid">
@@ -663,30 +775,14 @@ tr.highlight-row {
     <div class="sales-grid">
         <div class="log-sale" style="width: 30%;">
             <div class="sales-form">
-                <h4>Log a Sale</h4>
-                <form id="logSaleForm">
-                    @csrf
+                
+               <!-- Log Sale Button -->
+                <div class="mb-3">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logSaleModal">
+                        Log Sale
+                    </button>
+                </div>
 
-                    <label for="product_id">Select Product:</label>
-                    <select name="product_id" required>
-                        @foreach(App\Models\Product::all() as $product)
-                            <option value="{{ $product->id }}">{{ $product->name }} (Stock: {{ $product->stock }})</option>
-                        @endforeach
-                    </select>
-
-                    <label for="quantity">Quantity:</label>
-                    <input type="number" name="quantity" min="1" required>
-
-                    <!-- ✅ Discount Dropdown -->
-                    <label for="discount_type">Discount Type:</label>
-                    <select name="discount_type" id="discount_type" class="form-select">
-                        <option value="none">None</option>
-                        <option value="SC">Senior Citizen (20%)</option>
-                        <option value="PWD">PWD (20%)</option>
-                    </select>
-
-                    <button type="submit" class="button-fill green-button">Log Sale</button>
-                </form>
             </div>
         </div>
         <div class="sales-log" style="width: 70%;">
@@ -708,24 +804,34 @@ tr.highlight-row {
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($todaySales as $sale)
-                                <tr>
-                                    <td>{{ $sale->created_at->timezone('Asia/Manila')->format('h:i A') }}</td>
-                                    <td>{{ $sale->product->name ?? 'Deleted Product' }}</td>
-                                    <td>{{ $sale->quantity }}</td>
-                                    <td>{{ $sale->formatted_discount }}</td>
-                                    <td>₱{{ number_format($sale->total_price, 2) }}</td>
-                                    <td class="action-cell">
-                                        <button class="dots-btn"
-                                            onclick="openEditModal({{ $sale->id }}, '{{ $sale->product->name ?? 'Deleted' }}', {{ $sale->product_id }}, {{ $sale->quantity }})"
-                                        >⋮</button>
+                           @php
+                                $groupedSales = $todaySales->groupBy('sale_id');
+                            @endphp
+
+                            @foreach ($groupedSales as $saleId => $items)
+                                <tr class="bg-light">
+                                    <td colspan="4">
+                                        <strong>Sale ID:</strong> {{ $saleId }} <br>
+                                        <strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}
+                                    </td>
+                                    <td>
+                                        <strong>Discount:</strong> {{ $items->first()->sale->discount_type ?? 'None' }}
+                                    </td>
+                                    <td>
+                                        <strong>Total:</strong> ₱{{ number_format($items->sum('total_price') - ($items->first()->sale->discount_amount ?? 0), 2) }}
                                     </td>
                                 </tr>
-                            @empty
-                                <tr id="noSalesRow">
-                                    <td colspan="6" style="text-align: center;">No sales recorded today.</td>
-                                </tr>
-                            @endforelse
+
+                                @foreach ($items as $item)
+                                    <tr>
+                                        <td colspan="2">{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
+                                        <td>{{ $item->quantity }}</td>
+                                        <td>₱{{ number_format($item->total_price, 2) }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+
                         </tbody>
                     </table>
                 </div>
@@ -859,12 +965,150 @@ tr.highlight-row {
     </div>
   </div>
 </div>
+<!-- Log Sale Modal -->
+<div class="modal fade" id="logSaleModal" tabindex="-1" aria-labelledby="logSaleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content custom-log-modal-content shadow-lg border-0 rounded-4">
+      <div class="modal-header custom-log-modal-header text-white rounded-top-4">
+        <h5 class="modal-title fw-bold" id="logSaleModalLabel">Log New Sale</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body custom-log-modal-body p-4">
+        <form id="logSaleForm" method="POST" action="{{ route('sales.store') }}">
+            @csrf
+            <div id="itemRows">
+                <div class="item-row row g-3 align-items-end mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Product</label>
+                        <select name="product_id[]" class="form-select" required>
+                        @foreach($products as $product)
+                           <option value="{{ $product->id }}">{{ $product->name }} (₱{{ number_format($product->selling_price, 2) }})</option> 
+                        @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="quantity[]" class="form-control" min="1" value="1" required>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="button" class="btn remove-row">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="itemRows" class="mb-3"></div>
+
+        <button type="button" class="btn btn-outline-success fw-semibold mb-3" onclick="addSaleItem()">
+            + Add Item
+        </button>
+            <div class="mb-3">
+                <label class="form-label">Discount Type</label>
+                <select name="discount_type" class="form-control">
+                    <option value="NONE">None</option>
+                    <option value="SENIOR">Senior Citizen</option>
+                    <option value="PWD">PWD</option>
+                </select>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-success px-4">Submit Sale</button>
+            </div>
+            </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 
 
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    let itemIndex = 1; // Start from 1 if the first item is static
+
+    function addSaleItem() {
+        const container = document.getElementById('itemRows');
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'card mb-3 shadow-sm p-4 bg-white rounded border-0 position-relative';
+        wrapper.innerHTML = `
+            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()">
+                <i class="bi bi-x"></i>
+            </button>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Product</label>
+                    <select class="form-select" name="items[${itemIndex}][product_id]" required>
+                        @foreach($products as $product)
+                            <option value="{{ $product->id }}">
+                                {{ $product->name }} {{ $product->dosage }} (₱{{ number_format($product->selling_price, 2) }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Quantity</label>
+                    <input type="number" class="form-control" name="items[${itemIndex}][quantity]" min="1" value="1" required>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(wrapper);
+        itemIndex++;
+    }
+</script>
+
+
+
+
+<script>
+document.getElementById('logSaleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const productIds = [...form.querySelectorAll('select[name="product_id[]"]')].map(select => select.value);
+    const quantities = [...form.querySelectorAll('input[name="quantity[]"]')].map(input => input.value);
+    const discountType = form.querySelector('select[name="discount_type"]').value;
+
+    fetch('/sales', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({
+            product_id: productIds,
+            quantity: quantities,
+            discount_type: discountType
+        })
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Server responded with ${res.status}: ${text}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Reload the page after successful submission
+            window.location.reload();
+        } else {
+            alert(data.message || 'Sale failed to log.');
+        }
+    })
+    .catch(err => {
+        console.error('Server Error:', err);
+        alert('Server error – check console.');
+    });
+});
+</script>
+
+
+
 
 <script>
 
@@ -1014,75 +1258,63 @@ $('#confirmDeleteBtn').on('click', function () {
     // AJAX submit handler
     let saleCount = {{ $todaySales->count() }};
 
-$('#logSaleForm').on('submit', function(e) {
-    e.preventDefault();
+    $('#logSaleForm').on('submit', function(e) {
+        e.preventDefault();
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        const form = $(this);
+        const button = form.find('button');
+        button.prop('disabled', true).text('Logging...');
 
-    const form = $(this);
-    const button = form.find('button');
-    button.prop('disabled', true).text('Logging...');
+       $.ajax({
+            url: "{{ route('sales.store') }}",
+            method: "POST",
+            data: new FormData(this), // ✅ Support nested arrays
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                form[0].reset();
+                button.prop('disabled', false).text('Log Sale');
 
-    $.ajax({
-        url: "{{ route('sales.store') }}",
-        method: "POST",
-        data: form.serialize(),
-        success: function(response) {
-            form[0].reset();
-            button.prop('disabled', false).text('Log Sale');
+                saleCount++;
+                let discountLabel = 'None';
+                if (response.discount_type === 'SENIOR') discountLabel = 'Senior Citizen (20%)';
+                else if (response.discount_type === 'PWD') discountLabel = 'PWD (20%)';
 
-            if (saleCount === 0) {
-                // 🟢 First sale today → Reload
-                location.reload();
-                return;
+                response.items.forEach(item => {
+                    const newRow = `
+                        <tr class="highlight-row">
+                            <td>${response.time}</td>
+                            <td>${item.product}</td>
+                            <td>${item.quantity}</td>
+                            <td>${discountLabel}</td>
+                            <td>₱${item.subtotal}</td>
+                            <td class="action-cell">
+                                <button class="dots-btn"
+                                    onclick="openEditModal(${item.product_id}, '${item.product}', ${item.product_id}, ${item.quantity})"
+                                >⋮</button>
+                            </td>
+                        </tr>
+                    `;
+                    $('table.table tbody').prepend(newRow);
+                });
+
+                $('.highlight-row').hide().fadeIn(600).removeClass('highlight-row');
+                $('#total-profit').text('₱' + response.updatedTotalProfit);
+                $('#total-sold').text(response.updatedTotalSold);
+
+                const toast = $('#toast');
+                toast.html(response.message).css('display', 'block').addClass('show');
+                setTimeout(() => {
+                    toast.removeClass('show');
+                    setTimeout(() => toast.css('display', 'none'), 400);
+                }, 3000);
+            },
+            error: function(err) {
+                button.prop('disabled', false).text('Log Sale');
+                alert('Error logging sale. Please check stock or try again.');
             }
-
-            saleCount++; // increment for next calls
-
-            // Build and prepend new row
-            let discountLabel = 'None';
-            if (response.discount_type === 'SC') discountLabel = 'Senior Citizen (20%)';
-            else if (response.discount_type === 'PWD') discountLabel = 'PWD (20%)';
-
-            const newRow = `
-                <tr class="highlight-row">
-                    <td>${response.time}</td>
-                    <td>${response.product}</td>
-                    <td>${response.quantity}</td>
-                    <td>${discountLabel}</td>
-                    <td>₱${response.total}</td>
-                    <td class="action-cell">
-                        <button class="dots-btn"
-                            onclick="openEditModal(${response.id}, '${response.product}', ${response.product_id}, ${response.quantity})"
-                        >⋮</button>
-                    </td>
-                </tr>
-            `;
-
-            $('table.table tbody').prepend(newRow);
-            $('.highlight-row').hide().fadeIn(600).removeClass('highlight-row');
-
-            // Update totals
-            $('#total-profit').text('₱' + response.updatedTotalProfit);
-            $('#total-sold').text(response.updatedTotalSold);
-
-            // Update stock in dropdown
-            const updatedOption = $(`#logSaleForm select[name="product_id"] option[value="${response.product_id}"]`);
-            if (updatedOption.length) {
-                updatedOption.text(`${response.product} (Stock: ${response.updatedStock})`);
-            }
-
-            // Toast
-            const toast = $('#toast');
-            toast.html(response.message).css('display', 'block').addClass('show');
-            setTimeout(() => {
-                toast.removeClass('show');
-                setTimeout(() => toast.css('display', 'none'), 400);
-            }, 3000);
-        },
-        error: function(err) {
-            button.prop('disabled', false).text('Log Sale');
-            alert('Error logging sale. Please check stock or try again.');
-        }
-    });
+        });
 });
 
 </script>
