@@ -10,15 +10,17 @@ use Illuminate\Support\Facades\Log;
 class SaleController extends Controller
 {
  public function store(Request $request)
-    {
-        // Convert flat arrays into structured items array
+    { 
+       $productIds = $request->input('product_ids');
+        $quantities = $request->input('quantity');
+
         $items = [];
-        foreach ($request->product_id as $index => $productId) {
+        foreach ($productIds as $index => $productId) {
             $items[] = [
                 'product_id' => $productId,
-                'quantity' => $request->quantity[$index],
+                'quantity' => $quantities[$index],
             ];
-        }
+}
 
         // Inject the 'items' array into the request for validation
         $request->merge(['items' => $items]);
@@ -29,7 +31,8 @@ class SaleController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'discount_type' => 'nullable|in:NONE,SENIOR,PWD'
         ]);
-
+        
+       
         DB::beginTransaction();
         try {
             $totalBeforeDiscount = 0;
@@ -82,6 +85,7 @@ class SaleController extends Controller
             $sale->update([
                 'total_price' => round($finalTotal, 2),
                 'discount_type' => $request->discount_type,
+                'discount_amount' => round($discount, 2),
             ]);
             DB::commit();
                if ($request->ajax()) {
@@ -137,6 +141,7 @@ class SaleController extends Controller
         $product->decrement('stock', $request->quantity);
 
         $sale->update([
+    
             'quantity' => $request->quantity,
             'total_price' => $product->selling_price * $request->quantity,
         ]);
@@ -221,6 +226,7 @@ class SaleController extends Controller
         }
 
         $sale = new Sale();
+        
         $sale->product_id = $lastDeleted['product_id'];
         $sale->quantity = $lastDeleted['quantity'];
         $sale->discount_type = $lastDeleted['discount_type'];

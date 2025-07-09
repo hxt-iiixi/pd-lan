@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
+            $table->decimal('discount_amount', 8, 2)->default(0);
             $table->decimal('total_price', 10, 2)->nullable(); // Nullable so it can be updated later
             $table->string('discount_type')->default('NONE');
             $table->timestamps();

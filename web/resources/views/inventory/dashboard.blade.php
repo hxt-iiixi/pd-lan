@@ -3,6 +3,7 @@
 @section('content')
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
 <style>
     /* ===============================
    DASHBOARD LAYOUT & CARDS
@@ -543,7 +544,17 @@ tr.highlight-row {
 .custom-log-modal-content .btn-close {
   opacity: 1;
 }
-
+    .sale-header {
+        display: flex;
+        justify-content: space-between;
+    }
+    .sale-header .left,
+    .sale-header .right {
+        text-align: left;
+    }
+    .sale-header .right {
+        text-align: right;
+    }
 /* ===============================
    TOAST MESSAGE
 ================================ */
@@ -804,34 +815,36 @@ tr.highlight-row {
                             </tr>
                         </thead>
                         <tbody>
-                           @php
+                            @php
                                 $groupedSales = $todaySales->groupBy('sale_id');
                             @endphp
 
-                            @foreach ($groupedSales as $saleId => $items)
-                                <tr class="bg-light">
-                                    <td colspan="4">
-                                        <strong>Sale ID:</strong> {{ $saleId }} <br>
-                                        <strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}
-                                    </td>
-                                    <td>
-                                        <strong>Discount:</strong> {{ $items->first()->sale->discount_type ?? 'None' }}
-                                    </td>
-                                    <td>
-                                        <strong>Total:</strong> ₱{{ number_format($items->sum('total_price') - ($items->first()->sale->discount_amount ?? 0), 2) }}
+                           @foreach($todaySales->groupBy('sale_id') as $saleId => $items)
+                              <tr class="bg-light">
+                                    <td colspan="6">
+                                        <div class="sale-header">
+                                            <div class="left">
+                                                <strong>Sale ID:</strong> {{ $saleId }}<br>
+                                                <strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}
+                                            </div>
+                                            <div class="right">
+                                                <strong>Discount:</strong> ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}<br>
+                                                <strong>Total:</strong> ₱{{ number_format($items->first()->sale->total_price, 2) }}
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
-
                                 @foreach ($items as $item)
                                     <tr>
-                                        <td colspan="2">{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
+                                        <td>{{ $item->created_at->format('h:i A') }}</td>
+                                        <td>{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
                                         <td>{{ $item->quantity }}</td>
+                                        <td>—</td>
                                         <td>₱{{ number_format($item->total_price, 2) }}</td>
-                                        <td colspan="2"></td>
+                                        <td></td>
                                     </tr>
                                 @endforeach
                             @endforeach
-
                         </tbody>
                     </table>
                 </div>
@@ -974,53 +987,72 @@ tr.highlight-row {
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body custom-log-modal-body p-4">
-        <form id="logSaleForm" method="POST" action="{{ route('sales.store') }}">
-            @csrf
-            <div id="itemRows">
-                <div class="item-row row g-3 align-items-end mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Product</label>
-                        <select name="product_id[]" class="form-select" required>
-                        @foreach($products as $product)
-                           <option value="{{ $product->id }}">{{ $product->name }} (₱{{ number_format($product->selling_price, 2) }})</option> 
+      <form method="POST" action="{{ route('sales.store') }}">
+        @csrf
+        <div id="items-container">
+            <div class="item-group mb-3 border p-3 rounded">
+                <div class="form-group mb-2">
+                    <label for="product">Product</label>
+                    <select name="product_ids[]" class="form-control">
+                        @foreach ($products as $product)
+                            <option value="{{ $product->id }}">
+                                {{ $product->name }} (₱{{ number_format($product->selling_price, 2) }})
+                            </option>
                         @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" name="quantity[]" class="form-control" min="1" value="1" required>
-                    </div>
-                    <div class="col-md-2 text-end">
-                        <button type="button" class="btn remove-row">✕</button>
-                    </div>
+                    </select>
                 </div>
-            </div>
 
-            <div id="itemRows" class="mb-3"></div>
+                <div class="form-group mb-2">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" name="quantity[]" class="form-control" value="1" min="1" required>
+                </div>
 
-        <button type="button" class="btn btn-outline-success fw-semibold mb-3" onclick="addSaleItem()">
-            + Add Item
-        </button>
-            <div class="mb-3">
-                <label class="form-label">Discount Type</label>
-                <select name="discount_type" class="form-control">
-                    <option value="NONE">None</option>
-                    <option value="SENIOR">Senior Citizen</option>
-                    <option value="PWD">PWD</option>
-                </select>
+                <button type="button" class="btn btn-danger remove-item">✖</button>
             </div>
+        </div>
 
-            <div class="text-end">
-                <button type="submit" class="btn btn-success px-4">Submit Sale</button>
-            </div>
-            </form>
+        <button type="button" id="add-item" class="btn btn-secondary mb-3">+ Add Item</button>
+
+        <div class="form-group">
+            <label>Discount Type</label>
+            <select name="discount_type" class="form-control">
+                <option value="PWD">PWD</option>
+                <option value="SENIOR">Senior Citizen</option>   
+                <option value="NONE">None</option>              
+
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-2">Submit Sale</button>
+    </form>
       </div>
     </div>
   </div>
 </div>
 
 
+<script>
+    document.getElementById('add-item').addEventListener('click', function () {
+        const container = document.getElementById('items-container');
+        const firstItem = container.querySelector('.item-group');
+        const clone = firstItem.cloneNode(true);
 
+        // Clear inputs
+        clone.querySelector('select').selectedIndex = 0;
+        clone.querySelector('input').value = 1;
+
+        container.appendChild(clone);
+    });
+
+    document.getElementById('items-container').addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-item')) {
+            const items = document.querySelectorAll('.item-group');
+            if (items.length > 1) {
+                e.target.closest('.item-group').remove();
+            }
+        }
+    });
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1068,6 +1100,9 @@ document.getElementById('logSaleForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
     const form = this;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+
     const productIds = [...form.querySelectorAll('select[name="product_id[]"]')].map(select => select.value);
     const quantities = [...form.querySelectorAll('input[name="quantity[]"]')].map(input => input.value);
     const discountType = form.querySelector('select[name="discount_type"]').value;
@@ -1078,10 +1113,13 @@ document.getElementById('logSaleForm').addEventListener('submit', function(e) {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
         },
         body: JSON.stringify({
-            product_id: productIds,
-            quantity: quantities,
+            items: productIds.map((id, i) => ({
+                product_id: id,
+                quantity: quantities[i]
+            })),
             discount_type: discountType
         })
     })
@@ -1092,21 +1130,20 @@ document.getElementById('logSaleForm').addEventListener('submit', function(e) {
         }
         return res.json();
     })
-    .then(data => {
-        if (data.success) {
-            // Reload the page after successful submission
-            window.location.reload();
+    .then(response => {
+        if (response.success) {
+            location.reload(); // 🔁 Reload page on success
         } else {
-            alert(data.message || 'Sale failed to log.');
+            alert(response.message);
+            submitBtn.disabled = false;
         }
     })
     .catch(err => {
         console.error('Server Error:', err);
-        alert('Server error – check console.');
+        location.reload(); // 🔁 Reload page on error too
     });
 });
 </script>
-
 
 
 
