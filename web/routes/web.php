@@ -11,6 +11,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\SalesItemController;
 // Redirect root
 Route::get('/', function () {
     return redirect()->route('products.index');
@@ -89,3 +90,4 @@ Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'appro
 Route::delete('/admin/accounts/reject/{user}', [AccountsController::class, 'reject'])->name('admin.accounts.reject');
 Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.index');
 Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
+Route::resource('sales-items', SaleController::class);

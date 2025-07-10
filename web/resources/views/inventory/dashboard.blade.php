@@ -636,7 +636,17 @@ tr.highlight-row {
     display: flex;
     gap: 24px;
 }
-
+.custom-edit-button {
+    background-color: #3b82f6;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.custom-edit-button:hover {
+    background-color: #2563eb;
+}
 .sales-grid .log-sale {
     width: 30%;
 }
@@ -747,6 +757,46 @@ tr.highlight-row {
     max-width: 720px;
   }
 }
+
+.custom-modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.custom-modal-content {
+  background: #fff;
+  margin: 10% auto;
+  padding: 20px;
+  width: 400px;
+  border-radius: 8px;
+}
+
+.modal-buttons {
+  margin-top: 15px;
+  text-align: right;
+}
+
+.sales-btn {
+  padding: 5px 10px;
+  margin-left: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sales-btn-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.sales-btn-cancel {
+  background-color: #6c757d;
+  color: white;
+}
 </style>
 
 <div class="dashboard-grid">
@@ -841,7 +891,15 @@ tr.highlight-row {
                                         <td>{{ $item->quantity }}</td>
                                         <td>—</td>
                                         <td>₱{{ number_format($item->total_price, 2) }}</td>
-                                        <td></td>
+                                        <td>
+                                    
+                                            <button class="edit-sale-btn"
+                                                data-sale-id="{{ $item->id }}"
+                                                data-product-name="{{ $item->product->name }}"
+                                                data-quantity="{{ $item->quantity }}">
+                                                Edit
+                                            </button>
+                                        </td>
                                     </tr>
                                 @endforeach
                             @endforeach
@@ -866,6 +924,20 @@ tr.highlight-row {
 
 
 <div id="toast" class="toast-message" style="display: none;"></div>
+
+
+<div id="editQuantityModal" style="display:none; position:fixed; top:20%; left:35%; padding:20px; background:#fff; border:1px solid #ccc; z-index:999;">
+    <form id="editQuantityForm">
+        <input type="hidden" id="editItemId">
+        <input type="hidden" id="editSaleId">
+        <input type="hidden" id="originalQuantity">
+        <label>New Quantity:</label>
+        <input type="number" id="editQuantity" min="1" required>
+        <br><br>
+        <button type="submit">Save</button>
+        <button type="button" id="closeModalBtn">Cancel</button>
+    </form>
+</div>
 
 
 <!-- Sold Details Modal -->
@@ -1029,7 +1101,45 @@ tr.highlight-row {
     </div>
   </div>
 </div>
+<script>
+$(document).ready(function () {
+    $('.btn-edit-sale').on('click', function () {
+        const saleId = $(this).data('sale-id');
+        const productName = $(this).data('product-name');
+        const quantity = $(this).data('quantity');
+        const originalQty = $(this).data('original-quantity');
 
+        $('#editSaleId').val(saleId);
+        $('#editProductName').val(productName);
+        $('#editQuantity').val(quantity);
+        $('#editOriginalQty').val(originalQty);
+
+        $('#editSaleModal').show(); // Show modal
+    });
+
+    $('#editSaleForm').on('submit', function (e) {
+        e.preventDefault();
+
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '{{ route("sales.update") }}',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                alert(res.success);
+                $('#editSaleModal').hide();
+                location.reload(); // Optional: update the row manually if needed
+            },
+            error: function (xhr) {
+                alert(xhr.responseJSON?.error || 'Update failed.');
+            }
+        });
+    });
+});
+</script>
+
+</script>
 
 <script>
     document.getElementById('add-item').addEventListener('click', function () {
@@ -1053,7 +1163,7 @@ tr.highlight-row {
         }
     });
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -1424,7 +1534,6 @@ document.getElementById('chartTypeSelect').addEventListener('change', function (
 });
 loadChartData('profit'); // Load default
 </script>
-
 <script>
 $(document).on('click', '.edit-sale-btn', function () {
     const btn = $(this);
@@ -1435,25 +1544,32 @@ $(document).on('click', '.edit-sale-btn', function () {
     $('#editSaleModal').show();
 });
 
-// Submit edit sale
-$('#editSaleForm').on('submit', function (e) {
+$('#editSaleForm').submit(function(e) {
     e.preventDefault();
-    const formData = $(this).serialize();
+
+    const saleId = $('#editSaleId').val();
+    const quantity = $('#editQuantity').val();
+    const originalQuantity = $('#editOriginalQty').val();
 
     $.ajax({
-        url: "{{ route('sales.update') }}",
-        type: "POST",
-        data: formData,
-        success: function (res) {
-            showToast('Sale updated successfully.', 'green'); // ✅ Toast before reload
-            setTimeout(() => location.reload(), 1000); // slight delay so toast appears
+        url: '/sales/update',
+        type: 'POST',
+        data: {
+            _token: $('input[name="_token"]').val(),
+            sale_id: saleId,
+            quantity: quantity,
+            original_quantity: originalQuantity
         },
-        error: function () {
-            alert("Failed to update sale.");
+        success: function(response) {
+            alert(response.success);
+            location.reload();
+        },
+        error: function(xhr) {
+            console.error(xhr.responseText);
+            alert('Failed to update sale.');
         }
     });
 });
-
 </script>
 <script>
 function showToast(message, color = 'green') {
