@@ -120,56 +120,100 @@ class SaleController extends Controller
 
 
 
-
-    public function update(Request $request)
+public function update(Request $request)
     {
         $request->validate([
-            'sale_id' => 'required|exists:sales,id',
+            'sale_item_id' => 'required|exists:sales_items,id',
             'quantity' => 'required|integer|min:1',
-            'original_quantity' => 'required|integer|min:1'
+            'original_quantity' => 'required|integer',
         ]);
 
-        $sale = Sale::findOrFail($request->sale_id);
-        $product = Product::findOrFail($sale->product_id);
+        $salesItem = SalesItem::findOrFail($request->sale_item_id);
+        $product = Product::findOrFail($salesItem->product_id);
 
-        $product->increment('stock', $request->original_quantity);
+        // Calculate quantity difference
+        $diff = $request->quantity - $request->original_quantity;
 
-        if ($product->stock < $request->quantity) {
-            return response()->json(['error' => 'Not enough stock to update.'], 400);
+        // Check if stock is sufficient
+        if ($diff > 0 && $diff > $product->stock) {
+            return response()->json([
+                'message' => 'Insufficient stock. Only ' . $product->stock . ' item(s) left.'
+            ], 422);
         }
 
-        $product->decrement('stock', $request->quantity);
+        // Update product stock
+        $product->stock -= $diff;
+        $product->save();
+
+        // Update sales item
+        $salesItem->quantity = $request->quantity;
+        $salesItem->total_price = $product->selling_price * $request->quantity;
+        $salesItem->save();
+
+        // Recalculate total sale price
+        $sale = $salesItem->sale;
+        $newTotal = $sale->items()->sum('total_price');
+
+        $discount = 0;
+        if (in_array($sale->discount_type, ['SENIOR', 'PWD'])) {
+            $discount = $newTotal * 0.20;
+        }
 
         $sale->update([
-    
-            'quantity' => $request->quantity,
-            'total_price' => $product->selling_price * $request->quantity,
+            'total_price' => round($newTotal - $discount, 2),
+            'discount_amount' => round($discount, 2),
         ]);
 
-        return response()->json(['success' => 'Sale updated.']);
+        return response()->json(['message' => 'Sale updated and stock adjusted successfully.']);
     }
 
-    public function destroy(Request $request)
+   public function delete(Request $request)
     {
-        $sale = Sale::findOrFail($request->sale_id);
-        $product = Product::findOrFail($sale->product_id);
-
-        // Increment stock
-        $product->increment('stock', $sale->quantity);
-
-        // Store sale in session before deletion
-        session(['last_deleted_sale' => $sale->toArray()]);
-
-        $sale->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sale deleted successfully.',
-            'sale_id' => $sale->id,
-            'product_id' => $product->id,
-            'updatedStock' => $product->stock
+        $request->validate([
+            'sale_item_id' => 'required|exists:sales_items,id',
         ]);
+
+        $item = SalesItem::findOrFail($request->sale_item_id);
+        $product = Product::findOrFail($item->product_id);
+
+        // Save undo data before delete
+        session([
+            'last_deleted_sale' => [
+                'id' => $item->id,
+                'sale_id' => $item->sale_id,
+                'product_id' => $item->product_id,
+                'quantity' => $item->quantity,
+                'total_price' => $item->total_price,
+            ]
+        ]);
+
+        // Restore stock
+        $product->increment('stock', $item->quantity);
+
+        // Save parent sale
+        $sale = $item->sale;
+
+        // Delete item
+        $item->delete();
+
+        // Recalculate sale total
+        $newTotal = $sale->items()->sum('total_price');
+        $discount = 0;
+        if (in_array($sale->discount_type, ['SENIOR', 'PWD'])) {
+            $discount = $newTotal * 0.20;
+        }
+
+        $finalTotal = $newTotal - $discount;
+        $sale->update([
+            'total_price' => round($finalTotal, 2),
+            'discount_amount' => round($discount, 2),
+        ]);
+
+        Log::info('Session last_deleted_sale:', session('last_deleted_sale'));
+
+        return response()->json(['success' => true, 'message' => 'Sale item deleted successfully.']);
     }
+
 
     public function history(Request $request)
 {
@@ -217,37 +261,50 @@ class SaleController extends Controller
         return response()->json(['success' => true, 'message' => 'All sales have been reset.']);
     }
 
-    public function undo(Request $request)
-    {
-        $lastDeleted = session('last_deleted_sale');
+   public function undo(Request $request)
+{
+    $lastDeleted = session('last_deleted_sale');
 
-        if (!$lastDeleted || $lastDeleted['id'] != $request->sale_id) {
-            return response()->json(['success' => false, 'message' => 'No sale to restore.']);
-        }
-
-        $sale = new Sale();
-        
-        $sale->product_id = $lastDeleted['product_id'];
-        $sale->quantity = $lastDeleted['quantity'];
-        $sale->discount_type = $lastDeleted['discount_type'];
-        $sale->total_price = $lastDeleted['total_price'];
-        $sale->created_at = now();
-        $sale->updated_at = now();
-        $sale->save();
-
-
-        // Restore stock
-        $product = Product::find($sale->product_id);
-        $product->stock -= $sale->quantity;
-        $product->save();
-
-        session()->forget('last_deleted_sale');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sale restored successfully.'
-        ]);
+    if (!$lastDeleted || $lastDeleted['id'] != $request->sale_id) {
+        return response()->json(['success' => false, 'message' => 'No sale to restore.']);
     }
+
+    // Restore the sales_item
+    $item = new SalesItem();
+    $item->sale_id = $lastDeleted['sale_id'];
+    $item->product_id = $lastDeleted['product_id'];
+    $item->quantity = $lastDeleted['quantity'];
+    $item->total_price = $lastDeleted['total_price'];
+    $item->save();
+
+    // Deduct stock again
+    $product = Product::find($item->product_id);
+    if ($product) {
+        $product->decrement('stock', $item->quantity);
+    }
+
+    // Recalculate sale totals
+    $sale = Sale::find($item->sale_id);
+    $newTotal = $sale->items()->sum('total_price');
+    $discount = 0;
+
+    if (in_array($sale->discount_type, ['SENIOR', 'PWD'])) {
+        $discount = $newTotal * 0.20;
+    }
+
+    $finalTotal = $newTotal - $discount;
+    $sale->update([
+        'total_price' => round($finalTotal, 2),
+        'discount_amount' => round($discount, 2),
+    ]);
+
+    session()->forget('last_deleted_sale');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Sale restored successfully.'
+    ]);
+}
 
 
 }

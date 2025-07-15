@@ -45,6 +45,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/sales/reset', [SaleController::class, 'reset'])->name('sales.reset');
     Route::post('/sales/undo', [SaleController::class, 'undo'])->name('sales.undo');
     Route::get('/chart-data/{type}', [DashboardController::class, 'chartData']);
+    Route::post('/sales/delete', [SaleController::class, 'delete'])->name('sales.delete');
+
 });
 
 // Profile Settings (Custom View)
@@ -89,5 +91,6 @@ Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'appro
 Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'approve'])->name('admin.accounts.approve');
 Route::delete('/admin/accounts/reject/{user}', [AccountsController::class, 'reject'])->name('admin.accounts.reject');
 Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.index');
-Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::resource('sales-items', SaleController::class);
+Route::resource('products', ProductController::class);
+Route::post('/sales/delete', [SaleController::class, 'delete'])->name('sales.delete');

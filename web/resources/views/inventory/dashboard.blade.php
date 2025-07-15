@@ -885,18 +885,17 @@ tr.highlight-row {
                                     </td>
                                 </tr>
                                 @foreach ($items as $item)
-                                    <tr>
+                                   <tr>
                                         <td>{{ $item->created_at->format('h:i A') }}</td>
                                         <td>{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
                                         <td>{{ $item->quantity }}</td>
                                         <td>—</td>
                                         <td>₱{{ number_format($item->total_price, 2) }}</td>
                                         <td>
-                                    
-                                            <button class="edit-sale-btn"
-                                                data-sale-id="{{ $item->id }}"
-                                                data-product-name="{{ $item->product->name }}"
-                                                data-quantity="{{ $item->quantity }}">
+                                          <button 
+                                                class="button-fill green-button"
+                                                onclick="openEditSaleModal({{ $item->id }}, '{{ $item->product->name }}', {{ $item->quantity }})"
+                                            >
                                                 Edit
                                             </button>
                                         </td>
@@ -924,20 +923,6 @@ tr.highlight-row {
 
 
 <div id="toast" class="toast-message" style="display: none;"></div>
-
-
-<div id="editQuantityModal" style="display:none; position:fixed; top:20%; left:35%; padding:20px; background:#fff; border:1px solid #ccc; z-index:999;">
-    <form id="editQuantityForm">
-        <input type="hidden" id="editItemId">
-        <input type="hidden" id="editSaleId">
-        <input type="hidden" id="originalQuantity">
-        <label>New Quantity:</label>
-        <input type="number" id="editQuantity" min="1" required>
-        <br><br>
-        <button type="submit">Save</button>
-        <button type="button" id="closeModalBtn">Cancel</button>
-    </form>
-</div>
 
 
 <!-- Sold Details Modal -->
@@ -1014,7 +999,7 @@ tr.highlight-row {
     <h3>Edit Sale</h3>
     <form id="editSaleForm" style="display: flex; flex-direction: column; gap: 16px;">
         @csrf
-        <input type="hidden" name="sale_id" id="editSaleId">
+        <input type="hidden" name="sale_item_id" id="editSaleItemId">
         <input type="hidden" name="original_quantity" id="editOriginalQty">
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -1030,7 +1015,7 @@ tr.highlight-row {
         </div>
 
         <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
-            <button type="submit" class="button-fill green-button">Update Sale</button>
+            <button type="submit" class="button-fill green-button btn-update-sale">Update Sale</button>
             <button type="button" class="button-fill delete-button" onclick="openDeleteConfirmModal()">Delete</button>
         </div>
 
@@ -1101,43 +1086,6 @@ tr.highlight-row {
     </div>
   </div>
 </div>
-<script>
-$(document).ready(function () {
-    $('.btn-edit-sale').on('click', function () {
-        const saleId = $(this).data('sale-id');
-        const productName = $(this).data('product-name');
-        const quantity = $(this).data('quantity');
-        const originalQty = $(this).data('original-quantity');
-
-        $('#editSaleId').val(saleId);
-        $('#editProductName').val(productName);
-        $('#editQuantity').val(quantity);
-        $('#editOriginalQty').val(originalQty);
-
-        $('#editSaleModal').show(); // Show modal
-    });
-
-    $('#editSaleForm').on('submit', function (e) {
-        e.preventDefault();
-
-        const formData = $(this).serialize();
-
-        $.ajax({
-            url: '{{ route("sales.update") }}',
-            type: 'POST',
-            data: formData,
-            success: function (res) {
-                alert(res.success);
-                $('#editSaleModal').hide();
-                location.reload(); // Optional: update the row manually if needed
-            },
-            error: function (xhr) {
-                alert(xhr.responseJSON?.error || 'Update failed.');
-            }
-        });
-    });
-});
-</script>
 
 </script>
 
@@ -1259,17 +1207,16 @@ document.getElementById('logSaleForm').addEventListener('submit', function(e) {
 
 <script>
 
-let selectedSaleId = null;
+let selectedSaleItemId = null;
 
-function openEditModal(id, name, productId, quantity) {
-    selectedSaleId = id;
-    $('#editSaleId').val(id);
-    $('#editOriginalQty').val(quantity);
-    $('#editProductName').val(name);
-    $('#editQuantity').val(quantity);
-    $('#confirmProductName').text(name); // <-- insert product name in confirm modal
-    $('#editSaleModal').show();
-}
+function openEditSaleModal(itemId, productName, quantity) {
+        selectedSaleItemId = itemId;
+        $('#editSaleItemId').val(itemId); // hidden input inside the edit form
+        $('#editProductName').val(productName);
+        $('#editQuantity').val(quantity);
+        $('#editOriginalQty').val(quantity);
+        $('#editSaleModal').show();
+    }
 
 function openDeleteConfirmModal() {
     $('#editSaleModal').hide(); // hide edit modal first
@@ -1277,33 +1224,35 @@ function openDeleteConfirmModal() {
 }
 
 function confirmDeleteFromModal() {
-    if (!selectedSaleId) return;
+    if (!selectedSaleItemId) return;
 
-    $.ajax({
-        url: "{{ route('sales.delete') }}",
-        method: "POST",
-        data: {
-            _token: "{{ csrf_token() }}",
-            sale_id: selectedSaleId
+    fetch('/sales/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        success: function (res) {
-            if (res.success) {
-                // Store undo reference
-                localStorage.setItem('lastDeletedSaleId', selectedSaleId);
-                localStorage.setItem('toastMessage', `
-                    ${res.message}
-                    <button class="undo-button" onclick="undoDelete(${selectedSaleId})">Undo</button>
-                `);
-                localStorage.setItem('toastColor', 'red');
-                location.reload();
-            }
-        },
-        error: function () {
-            alert("Failed to delete sale.");
+        body: JSON.stringify({
+            sale_item_id: selectedSaleItemId
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.success) {
+       localStorage.setItem('toastMessage', `
+            ${res.message}
+            <button id="undo-btn" class="undo-button" data-sale-id="${selectedSaleItemId}">Undo</button>
+        `);
+            localStorage.setItem('toastColor', 'green');
+            location.reload();
+        } else {
+            alert('Failed to delete sale.');
         }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Failed to delete sale.');
     });
-
-    $('#deleteConfirmModal').hide();
 }
 
 
@@ -1353,26 +1302,7 @@ $('#confirmDeleteBtn').on('click', function () {
             alert('Failed to reset sales.');
         });
     }
-    function undoDelete(saleId) {
-        $.ajax({
-            url: "{{ route('sales.undo') }}",
-            type: "POST",
-            data: {
-                _token: "{{ csrf_token() }}",
-                sale_id: saleId
-            },
-            success: function (res) {
-                if (res.success) {
-                    localStorage.setItem('toastMessage', res.message);
-                    localStorage.setItem('toastColor', 'green');
-                    location.reload();
-                }
-            },
-            error: function () {
-                alert("Failed to undo the sale.");
-            }
-        });
-    }
+
 
 
 
@@ -1465,7 +1395,28 @@ $('#confirmDeleteBtn').on('click', function () {
 });
 
 </script>
-
+<script>
+function undoDelete(saleId) {
+    $.ajax({
+        url: "{{ route('sales.undo') }}",
+        type: "POST",
+        data: {
+            _token: "{{ csrf_token() }}",
+            sale_id: saleId
+        },
+        success: function (res) {
+            if (res.success) {
+                localStorage.setItem('toastMessage', res.message);
+                localStorage.setItem('toastColor', 'green');
+                location.reload();
+            }
+        },
+        error: function () {
+            alert("Failed to undo the sale.");
+        }
+    });
+}
+</script>
 <script>
 let chart;
 const ctx = document.getElementById('analyticsChart').getContext('2d');
@@ -1535,42 +1486,59 @@ document.getElementById('chartTypeSelect').addEventListener('change', function (
 loadChartData('profit'); // Load default
 </script>
 <script>
-$(document).on('click', '.edit-sale-btn', function () {
-    const btn = $(this);
-    $('#editSaleId').val(btn.data('sale-id'));
-    $('#editOriginalQty').val(btn.data('quantity'));
-    $('#editProductName').val(btn.data('product-name'));
-    $('#editQuantity').val(btn.data('quantity'));
-    $('#editSaleModal').show();
-});
+$(document).ready(function () {
+    // Prefill modal when Edit button is clicked
+    $(document).on('click', '.edit-sale-btn', function () {
+        const saleId = $(this).data('sale-id');
+        const productName = $(this).data('product-name');
+        const quantity = $(this).data('quantity');
 
-$('#editSaleForm').submit(function(e) {
-    e.preventDefault();
+        $('#editSaleId').val(saleId);
+        $('#editOriginalQty').val(quantity);
+        $('#editQuantity').val(quantity);
+        $('#editProductName').val(productName);
 
-    const saleId = $('#editSaleId').val();
-    const quantity = $('#editQuantity').val();
-    const originalQuantity = $('#editOriginalQty').val();
+        $('#editSaleModal').show();
+    });
 
-    $.ajax({
-        url: '/sales/update',
-        type: 'POST',
-        data: {
-            _token: $('input[name="_token"]').val(),
-            sale_id: saleId,
-            quantity: quantity,
-            original_quantity: originalQuantity
-        },
-        success: function(response) {
-            alert(response.success);
-            location.reload();
-        },
-        error: function(xhr) {
-            console.error(xhr.responseText);
-            alert('Failed to update sale.');
+    // Submit Update Sale form via AJAX
+    $(document).on('click', '.btn-update-sale', function (e) {
+        e.preventDefault();
+
+        let formData = {
+            sale_item_id: $('#editSaleItemId').val(),
+            original_quantity: $('#editOriginalQty').val(),
+            quantity: $('#editQuantity').val(),
+            _token: $('input[name="_token"]').val()
+        };
+
+        $.ajax({
+            url: "/sales/update",
+            method: "POST",
+            data: formData,
+            success: function (response) {
+                alert(response.message);
+                location.reload();
+            },
+            error: function (xhr) {
+                console.error(xhr.responseText);
+                alert('Failed to update sale. Please try again.');
+            }
+        });
+    });
+     // Optional: hide modal on outside click
+    $(window).on('click', function (e) {
+        if (e.target.id === "editSaleModal") {
+            $('#editSaleModal').hide();
         }
     });
 });
 </script>
+
+   
+
+
+
 <script>
 function showToast(message, color = 'green') {
     const toast = $('#toast');
@@ -1598,6 +1566,14 @@ $(document).ready(function () {
         showToast(msg, color || 'green');
         localStorage.removeItem('toastMessage');
         localStorage.removeItem('toastColor');
+
+        // Wait for toast to be in the DOM
+        setTimeout(() => {
+           $(document).on('click', '#undo-btn', function () {
+            const saleId = $(this).data('sale-id');
+            undoDelete(saleId);
+        });
+        }, 300);
     }
 });
 

@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
-   protected $fillable = ['product_id', 'quantity', 'total_price', 'discount_type', 'discount_amount'];
+   protected $fillable = ['total_price', 'discount_type', 'discount_amount'];
 
-    public function product()
-        {
-            return $this->belongsTo(Product::class);
+  public function items()
+    {
+        return $this->hasMany(SalesItem::class);
     }
 
     public function getFormattedDiscountAttribute()
@@ -26,5 +26,5 @@ class Sale extends Model
     {
         $this->attributes['discount_type'] = strtoupper($value ?? 'NONE');
     }
-
+    
 }
