@@ -164,7 +164,7 @@
             <button onclick="toggleDetails('{{ $day['date'] }}')">Expand</button> 
         </div>
 
-        <div id="details-{{ $day['date'] }}" class="details-table">
+        <div id="details-{{ $day['date'] }}" class="details-table hidden">
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -177,17 +177,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                   @foreach ($day['sales'] as $sale)
-                        @foreach ($sale->items as $item)
-                            <tr>
-                                <td>{{ $item->created_at->format('H:i') }}</td>
-                                <td>{{ $item->product->name }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>{{ ucfirst(optional($item->sale)->discount_type ?? '-') }}</td>
-                                <td>{{ number_format($item->total_price, 2) }}</td>
-                            </tr>
+                        @foreach ($day['sales'] as $sale)
+                            @foreach ($sale->items as $item)
+                                <tr>
+                                    <td>{{ $sale->created_at->format('M d, Y H:i') }}</td>
+                                    <td>{{ optional($item->product)->name ?? 'Unknown' }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>₱{{ number_format($sale->discount ?? 0, 2) }}</td>
+                                    <td>₱{{ number_format($item->quantity * $item->price, 2) }}</td>
+                                </tr>
+                            @endforeach
                         @endforeach
-                    @endforeach
                     </tbody>
                 </table>
             </div>
@@ -195,15 +195,28 @@
     </div>
 @endforeach
 
+
 <script>
     function toggleDetails(date) {
         const el = document.getElementById(`details-${date}`);
-        const isHidden = el.style.display === 'none' || el.style.display === '';
-        el.style.display = isHidden ? 'block' : 'none';
+        const isHidden = el.classList.contains('hidden');
 
+        // Toggle visibility using a 'hidden' class (preferred over inline styles)
+        el.classList.toggle('hidden', !isHidden);
+
+        // Update button text
         const button = el.previousElementSibling.querySelector('button');
-        if (button) button.innerText = isHidden ? 'Collapse' : 'Expand';
+        if (button) {
+            button.innerText = isHidden ? 'Collapse' : 'Expand';
+        }
     }
+
+    // Optional: add initial 'hidden' class to all details on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.details-table').forEach(el => {
+            el.classList.add('hidden');
+        });
+    });
 </script>
 
 @endsection

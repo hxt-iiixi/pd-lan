@@ -304,7 +304,7 @@ table td:last-child {
 .modal-box input[type="number"],
 .modal-box input[type="date"],
 .modal-box select {
-    width: 100%;
+    width: 90%;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid #ccc;

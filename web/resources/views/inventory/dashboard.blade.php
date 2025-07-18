@@ -797,6 +797,288 @@ tr.highlight-row {
   background-color: #6c757d;
   color: white;
 }
+/* === Improved Log Sale Modal === */
+#logSaleModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    border-radius: 20px;
+
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+    background: #ffffff;
+    font-family: 'Lexend', sans-serif;
+}
+
+#logSaleModal .modal-header {
+    background: linear-gradient(to right, #10b981, #059669);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border-bottom: none;
+}
+
+#logSaleModal .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+#logSaleModal .btn-close {
+    background-color: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: white;
+    opacity: 1;
+}
+
+#logSaleModal .modal-body {
+    background-color: #f9fafb;
+    padding: 2rem;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+#logSaleModal .item-group {
+    position: relative; /* 🔁 Enable positioning context */
+    border: 1px solid #e5e7eb;
+    padding: 1rem 1rem 1rem 1rem;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+}
+
+
+#logSaleModal label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+#logSaleModal select,
+#logSaleModal input {
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    font-size: 0.95rem;
+}
+
+#logSaleModal .remove-item {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: #ef4444;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+#logSaleModal .remove-item:hover {
+    background-color: #dc2626;
+}
+
+#logSaleModal #add-item {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #38bdf8;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+#logSaleModal #add-item:hover {
+    background-color: #bae6fd;
+    color: #075985;
+}
+
+#logSaleModal .btn-primary {
+    background-color: #10b981;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+#logSaleModal .btn-primary:hover {
+    background-color: #059669;
+}
+
+#logSaleModal select.form-control,
+#logSaleModal .form-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    background-color: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' fill='%231f2937' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5.25 7.5L10 12.25L14.75 7.5H5.25Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#logSaleModal select.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Modal body layout */
+.custom-log-modal-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+/* Make the items scrollable */
+#items-container.scrollable-items {
+  overflow-y: auto;
+  max-height: 50vh; /* adjust as needed */
+  padding-right: 10px;
+}
+
+/* Optional scrollbar styling */
+#items-container.scrollable-items::-webkit-scrollbar {
+  width: 6px;
+}
+#items-container.scrollable-items::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.modal-body form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden; /* prevents scroll on modal body itself */
+}
+
+#items-scroll-wrapper {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 8px; /* optional: avoid cutting off scrollbar */
+  min-height: 100px; /* ensures there's always scrollable area */
+}
+
+.btn-log-sale {
+  background-color: #10b981; /* Bootstrap primary color */
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+  border: none;
+}
+
+.btn-log-sale:hover {
+  background-color: #059669; /* slightly darker */
+  transform: scale(1.02);
+}
+/* Toggle Button Small Style */
+.button-fill-sm {
+  padding: 6px 14px;
+  border-radius: 50px;
+  border: 1px solid var(--bs-primary);
+  background-color: transparent;
+  color: var(--bs-primary);
+  font-size: 0.85rem;
+  transition: all 0.25s ease;
+}
+
+.button-fill-sm:hover {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+
+/* Expand/Collapse Animation */
+.sale-items {
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.sale-items:not(.show) {
+  display: block;
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: scaleY(0.98);
+  pointer-events: none;
+}
+
+.sale-items.show {
+    display: table-row-group;
+    max-height: 1000px; /* large enough */
+}
+.sales-table .action-cell {
+    min-width: 110px; /* prevent layout shift */
+    text-align: right;
+}
+.sale-items.hide {
+    display: none;
+    max-height: 0;
+}
+.sales-table .toggle-details {
+    transition: all 0.3s ease;
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #0d6efd;
+    background: transparent;
+    border: none;
+}
+.toggle-btn {
+    background-color: transparent;
+    border: 1px solid #0d6efd;
+    color: #0d6efd;
+    padding: 5px 12px;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.toggle-btn:hover {
+    background-color: #0d6efd;
+    color: white;
+}
+.sales-table .details-row {
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+    background-color: #fef7f7;
+}
+
+.sales-table .details-content {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
 </style>
 
 <div class="dashboard-grid">
@@ -839,7 +1121,7 @@ tr.highlight-row {
                 
                <!-- Log Sale Button -->
                 <div class="mb-3">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logSaleModal">
+                    <button class="btn btn-log-sale" data-bs-toggle="modal" data-bs-target="#logSaleModal">
                         Log Sale
                     </button>
                 </div>
@@ -870,37 +1152,43 @@ tr.highlight-row {
                             @endphp
 
                            @foreach($todaySales->groupBy('sale_id') as $saleId => $items)
-                              <tr class="bg-light">
-                                    <td colspan="6">
-                                        <div class="sale-header">
-                                            <div class="left">
-                                                <strong>Sale ID:</strong> {{ $saleId }}<br>
-                                                <strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}
+                                <tr class="bg-light">
+                                    <td colspan="6" class="p-3">
+                                        <div class="sale-header d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div><strong>Sale ID:</strong> {{ $saleId }}</div>
+                                                <div><strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}</div>
                                             </div>
-                                            <div class="right">
-                                                <strong>Discount:</strong> ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}<br>
-                                                <strong>Total:</strong> ₱{{ number_format($items->first()->sale->total_price, 2) }}
+                                            <div>
+                                                <div><strong>Discount:</strong> ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}</div>
+                                                <div><strong>Total:</strong> ₱{{ number_format($items->first()->sale->total_price, 2) }}</div>
                                             </div>
+                                            <button class="toggle-btn button-fill-sm" data-target="sale-{{ $saleId }}">
+                                                Hide Items
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                                @foreach ($items as $item)
-                                   <tr>
-                                        <td>{{ $item->created_at->format('h:i A') }}</td>
-                                        <td>{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
-                                        <td>{{ $item->quantity }}</td>
-                                        <td>—</td>
-                                        <td>₱{{ number_format($item->total_price, 2) }}</td>
-                                        <td>
-                                          <button 
-                                                class="button-fill green-button"
-                                                onclick="openEditSaleModal({{ $item->id }}, '{{ $item->product->name }}', {{ $item->quantity }})"
-                                            >
-                                                Edit
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
+
+                                <tbody id="sale-{{ $saleId }}" class="sale-items animate-expand show">
+                                    @foreach ($items as $item)
+                                        <tr>
+                                            <td>{{ $item->created_at->format('h:i A') }}</td>
+                                            <td>{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
+                                            <td>{{ $item->quantity }}</td>
+                                            <td>—</td>
+                                            <td>₱{{ number_format($item->total_price, 2) }}</td>
+                                            <td>
+                                                <button 
+                                                    class="button-fill green-button"
+                                                    onclick="openEditSaleModal({{ $item->id }}, '{{ $item->product->name }}', {{ $item->quantity }})"
+                                                >
+                                                    Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
                             @endforeach
                         </tbody>
                     </table>
@@ -1041,54 +1329,72 @@ tr.highlight-row {
     <div class="modal-content custom-log-modal-content shadow-lg border-0 rounded-4">
       <div class="modal-header custom-log-modal-header text-white rounded-top-4">
         <h5 class="modal-title fw-bold" id="logSaleModalLabel">Log New Sale</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">X</button>
       </div>
-      <div class="modal-body custom-log-modal-body p-4">
-      <form method="POST" action="{{ route('sales.store') }}">
-        @csrf
-        <div id="items-container">
-            <div class="item-group mb-3 border p-3 rounded">
+      <div class="modal-body p-0">
+        <form method="POST" action="{{ route('sales.store') }}" class="d-flex flex-column" style="max-height: 70vh;">
+            @csrf
+
+            <!-- Scrollable container -->
+            <div id="items-scroll-wrapper" class="overflow-auto p-3" style="flex: 1 1 auto; min-height: 0;">
+            <div id="items-container">
+                <!-- Item group template -->
+                <div class="item-group mb-3 border rounded p-3">
                 <div class="form-group mb-2">
                     <label for="product">Product</label>
-                    <select name="product_ids[]" class="form-control">
-                        @foreach ($products as $product)
-                            <option value="{{ $product->id }}">
-                                {{ $product->name }} (₱{{ number_format($product->selling_price, 2) }})
-                            </option>
-                        @endforeach
+                    <select name="product_ids[]" class="form-control" required>
+                    @foreach ($products as $product)
+                        <option value="{{ $product->id }}">{{ $product->name }}</option>
+                    @endforeach
                     </select>
                 </div>
-
                 <div class="form-group mb-2">
                     <label for="quantity">Quantity</label>
                     <input type="number" name="quantity[]" class="form-control" value="1" min="1" required>
                 </div>
-
-                <button type="button" class="btn btn-danger remove-item">✖</button>
+                <button type="button" class="btn btn-danger remove-item mt-2">X</button>
+                </div>
             </div>
+            </div>
+
+            <!-- Footer controls -->
+            <div class="p-3 border-top bg-light">
+                <button type="button" id="add-item" class="btn btn-secondary mb-3">+ Add Item</button>
+                    <div class="form-group mb-2">
+                        <label>Discount Type</label>
+                        <select name="discount_type" class="form-control">
+                        <option value="PWD">PWD</option>
+                        <option value="SENIOR">Senior</option>
+                        <option value="NONE">None</option>
+                        </select>
+                    </div>
+                <button type="submit" class="btn btn-primary w-100">Submit</button>
+            </div>
+        </form>
         </div>
-
-        <button type="button" id="add-item" class="btn btn-secondary mb-3">+ Add Item</button>
-
-        <div class="form-group">
-            <label>Discount Type</label>
-            <select name="discount_type" class="form-control">
-                <option value="PWD">PWD</option>
-                <option value="SENIOR">Senior Citizen</option>   
-                <option value="NONE">None</option>              
-
-            </select>
-        </div>
-
-        <button type="submit" class="btn btn-primary mt-2">Submit Sale</button>
-    </form>
-      </div>
     </div>
   </div>
 </div>
 
 </script>
+<script>
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const targetId = this.dataset.target;
+        const target = document.getElementById(targetId);
+        if (target.classList.contains('show')) {
+            target.classList.remove('show');
+            target.classList.add('hide');
+            this.textContent = 'Show Items';
+        } else {
+            target.classList.remove('hide');
+            target.classList.add('show');
+            this.textContent = 'Hide Items';
+        }
+    });
+});
 
+</script>
 <script>
     document.getElementById('add-item').addEventListener('click', function () {
         const container = document.getElementById('items-container');

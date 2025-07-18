@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\SalesItem;
 class Sale extends Model
 {
    protected $fillable = ['total_price', 'discount_type', 'discount_amount'];
 
-  public function items()
+public function items()
     {
         return $this->hasMany(SalesItem::class);
     }
@@ -26,5 +26,4 @@ class Sale extends Model
     {
         $this->attributes['discount_type'] = strtoupper($value ?? 'NONE');
     }
-    
 }

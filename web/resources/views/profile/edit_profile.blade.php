@@ -31,6 +31,7 @@
 
     .form-input {
         width: 100%;
+        box-sizing: border-box;
         padding: 10px;
         border-radius: 10px;
         border: 1px solid #cbd5e1;
@@ -126,13 +127,13 @@
 
             <label class="form-label">New Password <small>(optional)</small></label>
             <div class="input-wrapper">
-                <input type="password" id="password" name="password" class="form-input" placeholder="••••••••">
+                <input type="password" id="password" name="password" class="form-input" placeholder="•••">
                 <button type="button" onclick="togglePassword('password', this)" class="show-pass-btn">Show</button>
             </div>
 
             <label class="form-label">Confirm New Password</label>
             <div class="input-wrapper">
-                <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" placeholder="••••••••">
+                <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" placeholder="•••">
                 <button type="button" onclick="togglePassword('password_confirmation', this)" class="show-pass-btn">Show</button>
             </div>
 

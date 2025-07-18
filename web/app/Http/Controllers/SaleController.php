@@ -216,43 +216,50 @@ public function update(Request $request)
 
 
     public function history(Request $request)
-{
-    $query = Sale::with('product');
+    {
+        $query = Sale::with('items.product'); // use dot notation for proper eager loading
 
-    $date = $request->input('date');
+        $date = $request->input('date');
 
-    // Fix manually typed d/m/Y format if needed
-    if ($date && str_contains($date, '/')) {
-        try {
-            $date = \Carbon\Carbon::createFromFormat('d/m/Y', $date)->format('Y-m-d');
-        } catch (\Exception $e) {
-            $date = null;
+        if ($date && str_contains($date, '/')) {
+            try {
+                $date = \Carbon\Carbon::createFromFormat('d/m/Y', $date)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $date = null;
+            }
         }
+
+        if ($date) {
+            $query->whereDate('created_at', $date);
+        }
+
+        $sales = $query->orderBy('created_at', 'desc')->get()
+            ->groupBy(fn($sale) => $sale->created_at->format('Y-m-d'));
+
+        $dailySummary = [];
+
+        foreach ($sales as $date => $daySales) {
+            $totalSold = 0;
+            $totalProfit = 0;
+
+            foreach ($daySales as $sale) {
+                foreach ($sale->items as $item) {
+                    $totalSold += $item->quantity;
+                    $totalProfit += $item->price * $item->quantity;
+                }
+            }
+
+            $dailySummary[] = [
+                'date' => $date,
+                'totalSold' => $totalSold,
+                'totalProfit' => $totalProfit,
+                'sales' => $daySales,
+            ];
+        }
+
+        return view('inventory.history', compact('dailySummary'));
     }
 
-    if ($date) {
-        $query->whereDate('created_at', $date);
-    }
-
-    $sales = $query->orderBy('created_at', 'desc')->get()
-        ->groupBy(fn($sale) => $sale->created_at->format('Y-m-d'));
-
-    $dailySummary = [];
-
-    foreach ($sales as $date => $daySales) {
-        $totalSold = $daySales->sum('quantity');
-        $totalProfit = $daySales->sum(fn($s) => $s->total_price);
-        $dailySummary[] = [
-            'date' => $date,
-            'totalSold' => $totalSold,
-            'totalProfit' => $totalProfit,
-            'sales' => $daySales,
-        ];
-    }
-
-    return view('inventory.history', compact('dailySummary'));
-
-}
 
 
     public function reset()
