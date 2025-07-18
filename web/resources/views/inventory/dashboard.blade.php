@@ -919,7 +919,6 @@ tr.highlight-row {
 #logSaleModal .btn-primary:hover {
     background-color: #059669;
 }
-
 #logSaleModal select.form-control,
 #logSaleModal .form-select {
     appearance: none;
@@ -929,10 +928,10 @@ tr.highlight-row {
     background-color: #fff;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
-    padding: 10px 16px;
+    padding: 10px 2.5rem 10px 16px;
     font-size: 0.95rem;
     font-weight: 500;
-    color: #1f2937;
+    color: #469c24ff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' fill='%231f2937' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5.25 7.5L10 12.25L14.75 7.5H5.25Z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -942,10 +941,21 @@ tr.highlight-row {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+#logSaleModal select.form-control:hover {
+    border-color: #94a3b8;
+    background-color: #f8fafc;
+}
+
 #logSaleModal select.form-control:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+#logSaleModal select.form-control:disabled {
+    background-color: #f1f5f9;
+    color: #9ca3af;
+    cursor: not-allowed;
 }
 
 /* Modal body layout */
@@ -1079,6 +1089,7 @@ tr.highlight-row {
     padding: 8px 12px;
     font-size: 0.9rem;
 }
+
 </style>
 
 <div class="dashboard-grid">
@@ -1377,6 +1388,8 @@ tr.highlight-row {
 </div>
 
 </script>
+
+
 <script>
   document.querySelectorAll('.toggle-btn').forEach(btn => {
     btn.addEventListener('click', function () {

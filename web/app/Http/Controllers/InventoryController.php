@@ -7,20 +7,26 @@ use App\Models\Sale;
 
 class InventoryController extends Controller
 {
-    public function history()
+    public function salesHistory()
     {
-        $sales = Sale::with('product')
+        $sales = \App\Models\Sale::with(['items.product'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->groupBy(function ($sale) {
-                return $sale->created_at->format('Y-m-d');
-            });
+            ->groupBy(fn($sale) => $sale->created_at->format('Y-m-d'));
 
         $dailySummary = [];
 
         foreach ($sales as $date => $daySales) {
-            $totalSold = $daySales->sum('quantity');
-            $totalProfit = $daySales->sum('total_price');
+            $totalSold = 0;
+            $totalProfit = 0;
+
+            foreach ($daySales as $sale) {
+                foreach ($sale->items as $item) {
+                    $totalSold += $item->quantity;
+                    $totalProfit += $item->total_price;
+                }
+            }
+
             $dailySummary[] = [
                 'date' => $date,
                 'totalSold' => $totalSold,
@@ -31,4 +37,5 @@ class InventoryController extends Controller
 
         return view('inventory.history', compact('dailySummary'));
     }
+
 }

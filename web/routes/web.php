@@ -35,7 +35,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('aut
 // Inventory
 Route::resource('products', ProductController::class)->middleware('auth');
 Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->middleware('auth');
-Route::get('/inventory/history', [InventoryController::class, 'history'])->middleware('auth')->name('inventory.history');
+
 
 // Sales
 Route::middleware('auth')->group(function () {
@@ -90,7 +90,12 @@ Route::middleware(['auth', 'is.admin'])->group(function () {
 Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'approve'])->name('admin.accounts.approve')->middleware('is.admin');
 Route::post('/admin/accounts/{user}/approve', [AccountsController::class, 'approve'])->name('admin.accounts.approve');
 Route::delete('/admin/accounts/reject/{user}', [AccountsController::class, 'reject'])->name('admin.accounts.reject');
-Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.index');
+
 Route::resource('sales-items', SaleController::class);
 Route::resource('products', ProductController::class);
 Route::post('/sales/delete', [SaleController::class, 'delete'])->name('sales.delete');
+Route::get('/inventory/history', [InventoryController::class, 'salesHistory'])
+    ->middleware('auth')
+    ->name('inventory.history');
+
+
