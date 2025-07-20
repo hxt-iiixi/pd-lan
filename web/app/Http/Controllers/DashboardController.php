@@ -25,7 +25,9 @@ class DashboardController extends Controller
         $totalProducts = Product::count();
 
         // 💰 Total profit and quantity from SalesItems
-        $totalProfit = SalesItem::whereDate('created_at', $today)->sum('total_price');
+        $totalProfit = Sale::whereDate('created_at', $today)
+        ->get()
+        ->sum(fn($sale) => $sale->total_price ?? 0);
         $totalSoldQty = SalesItem::whereDate('created_at', $today)->sum('quantity');
 
         // 🔝 Most sold products today
