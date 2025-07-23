@@ -9,8 +9,8 @@ class AccountsController extends Controller
 {
     public function index()
     {
-        $users = User::all();
-        $pendingUsers = User::where('is_approved', false)->get();
+       $users = User::where('is_approved', true)->latest()->get();
+        $pendingUsers = User::where('is_approved', false)->latest()->get();
 
         return view('admin.accounts.index', compact('users', 'pendingUsers'));
     }

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class SaleController extends Controller
 {
  public function store(Request $request)
-    { 
+    {
        $productIds = $request->input('product_ids');
         $quantities = $request->input('quantity');
 

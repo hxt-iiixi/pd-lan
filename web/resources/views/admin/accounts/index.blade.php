@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Accounts')
-
+@if(auth()->check() && auth()->user()->is_admin)
 @section('content')
 
 <style>
@@ -52,6 +52,52 @@ thead {
     border-left: 4px solid #8b5e3c;
     color: #8b5e3c;
 }
+
+/* Styled Buttons */
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-family: 'Lexend', sans-serif;
+}
+
+/* Approve Button */
+.btn-success {
+    background-color: #10b981;
+    border: none;
+    color: white;
+}
+.btn-success:hover {
+    background-color: #059669;
+    transform: scale(1.03);
+}
+
+/* Reject / Remove Button */
+.btn-danger {
+    background-color: #ef4444;
+    border: none;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #b91c1c;
+    transform: scale(1.03);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap; /* Optional: handles small screen wrap */
+}
+
+.action-buttons form {
+    display: inline-block; /* ensures buttons stay side-by-side */
+    margin: 0;
+}
+
 </style>
 
 
@@ -119,16 +165,18 @@ thead {
             <tr>
                 <td>{{ $pending->name }}</td>
                 <td>{{ $pending->email }}</td>
-                <td class="text-center d-flex gap-2 justify-content-center">
-                    <form method="POST" action="{{ route('admin.accounts.approve', $pending->id) }}">
-                        @csrf
-                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                    </form>
-                    <form method="POST" action="{{ route('admin.accounts.reject', $pending->id) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm">Reject</button>
-                    </form>
+               <td class="text-center">
+                    <div class="action-buttons">
+                        <form method="POST" action="{{ route('admin.accounts.approve', $pending->id) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        <form method="POST" action="{{ route('admin.accounts.reject', $pending->id) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             @endforeach
@@ -137,3 +185,4 @@ thead {
 
 </div>
 @endsection
+@endif

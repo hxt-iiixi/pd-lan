@@ -1089,7 +1089,12 @@ tr.highlight-row {
     padding: 8px 12px;
     font-size: 0.9rem;
 }
-
+.modal.show .modal-dialog {
+  margin: auto;               /* horizontal center */
+  top: 50%;
+  transform: translateY(-50%);
+  position: relative;
+}
 </style>
 
 <div class="dashboard-grid">

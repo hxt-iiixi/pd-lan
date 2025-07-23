@@ -21,9 +21,18 @@ class InventoryController extends Controller
             $totalProfit = 0;
 
             foreach ($daySales as $sale) {
+                $saleTotal = $sale->items->sum('total_price');
+                $discount = $sale->discount_amount ?? 0;
+
                 foreach ($sale->items as $item) {
                     $totalSold += $item->quantity;
-                    $totalProfit += $item->total_price;
+
+                    // Avoid division by zero
+                    $itemPortion = $saleTotal > 0 ? ($item->total_price / $saleTotal) : 0;
+                    $discountShare = $itemPortion * $discount;
+
+                    $profitAfterDiscount = $item->total_price - $discountShare;
+                    $totalProfit += $profitAfterDiscount;
                 }
             }
 
@@ -37,5 +46,6 @@ class InventoryController extends Controller
 
         return view('inventory.history', compact('dailySummary'));
     }
+
 
 }

@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Products')
+@if(auth()->check() && auth()->user()->is_admin)
 @section('content')
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -481,6 +482,43 @@ table td:last-child {
     background: #ccc;
     border-radius: 3px;
 }
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    list-style: none;
+    margin-top: 30px;
+    padding: 0;
+}
+
+.pagination li a,
+.pagination li span {
+    display: inline-block;
+    padding: 10px 18px;
+    border: 2px solid #007bff;
+    border-radius: 999px;
+    color: #007bff;
+    font-weight: bold;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.pagination li a:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.pagination li.active span {
+    background-color: #007bff;
+    color: white;
+    cursor: default;
+}
+
+.pagination li.disabled span {
+    opacity: 0.5;
+    pointer-events: none;
+}
 
 </style>
 
@@ -868,3 +906,4 @@ function toggleFilterMenu() {
 
 
 @endsection
+@endif
