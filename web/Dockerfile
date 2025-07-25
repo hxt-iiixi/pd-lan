@@ -12,19 +12,26 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy existing application directory contents
+# Copy app files
 COPY . /var/www/html
 
-# Copy custom vhost config to apache
-COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
-
-# Set file permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Copy custom vhost config
+COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Run Laravel build scripts
+# Laravel build scripts
 RUN composer install --no-dev --optimize-autoloader && \
     php artisan config:cache && \
     php artisan route:cache
+
+# Generate .env key (optional if not done elsewhere)
+COPY .env.example .env
+RUN php artisan key:generate
+
+# ✅ Laravel dev server instead of Apache (optional)
+CMD php artisan migrate:fresh --seed --force && php artisan serve --host=0.0.0.0 --port=8080
