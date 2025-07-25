@@ -15,22 +15,22 @@ class DashboardController extends Controller
     {
         $today = Carbon::today();
 
-        // 🔁 Get today's Sales Items (multi-product sales)
+  
         $todaySales = SalesItem::with(['product', 'sale'])
             ->whereDate('created_at', $today)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // 🔢 Total products
+    
         $totalProducts = Product::count();
 
-        // 💰 Total profit and quantity from SalesItems
+      
         $totalProfit = Sale::whereDate('created_at', $today)
         ->get()
         ->sum(fn($sale) => $sale->total_price ?? 0);
         $totalSoldQty = SalesItem::whereDate('created_at', $today)->sum('quantity');
 
-        // 🔝 Most sold products today
+       
         $soldDetails = $todaySales
             ->groupBy('product_id')
             ->map(function ($group) {
@@ -41,7 +41,7 @@ class DashboardController extends Controller
             })
             ->sortByDesc('total_quantity');
 
-        // 📉 Low stock products
+       
         $lowStock = Product::where('stock', '<', 50)
             ->orderBy('stock', 'asc')
             ->get();

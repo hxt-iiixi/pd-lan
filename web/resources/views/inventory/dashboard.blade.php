@@ -1876,7 +1876,7 @@ function showToast(message, color = 'green') {
 
     setTimeout(() => {
         toast.removeClass('show');
-        setTimeout(() => toast.css('display', 'none'), 400);
+        setTimeout(() => toast.css('display', 'none'), 1000);
     }, 3000);
 }
 </script>
@@ -1897,7 +1897,7 @@ $(document).ready(function () {
             const saleId = $(this).data('sale-id');
             undoDelete(saleId);
         });
-        }, 300);
+        }, 1000);
     }
 });
 
