@@ -871,7 +871,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const paginationLink = e.target.closest('.pagination a');
         if (paginationLink) {
             e.preventDefault();
-            const link = paginationLink.href;
+            const url = new URL(paginationLink.href);
+            url.protocol = 'https:';
+            const link = url.toString();
+
             const page = new URL(link).searchParams.get('page');
             const nextPage = parseInt(page);
             const direction = nextPage > currentPage ? 'slide-left' : 'slide-right';
