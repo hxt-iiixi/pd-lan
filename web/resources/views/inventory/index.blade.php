@@ -822,6 +822,7 @@ function applyFilters() {
 
 // On load tab + pagination logic
 document.addEventListener('DOMContentLoaded', function () {
+    let currentPage = parseInt(new URL(window.location.href).searchParams.get('page')) || 1;
     const lowStockBtn = document.getElementById('filterLowStock');
     const lowStockParam = new URLSearchParams(window.location.search).get('low_stock');
     if (lowStockBtn) {
