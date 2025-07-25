@@ -873,7 +873,9 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             const link = paginationLink.href;
             const page = new URL(link).searchParams.get('page');
-            const direction = parseInt(page) > currentPage ? 'slide-left' : 'slide-right';
+            const nextPage = parseInt(page);
+            const direction = nextPage > currentPage ? 'slide-left' : 'slide-right';
+
             const container = document.getElementById('productContainer');
 
             fetch(link, {
@@ -885,7 +887,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 container.classList.remove('slide-left', 'slide-right');
                 void container.offsetWidth;
                 container.classList.add(direction);
-                currentPage = parseInt(page);
+                currentPage = nextPage; 
             });
         }
     });
