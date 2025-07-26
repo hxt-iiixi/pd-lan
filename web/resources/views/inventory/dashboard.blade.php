@@ -1106,13 +1106,19 @@ tr.highlight-row {
 
     <div class="stat-card green">
         <i class="fa-solid fa-wallet stat-icon"></i>
-        <div class="stat-header">Total Profit</div>
+        <div class="stat-header">Total Sales</div>
         <div class="stat-count" id="total-profit">₱{{ number_format($totalProfit, 2) }}</div>
+    </div>
+
+    <div class="stat-card green">
+        <i class="fa-solid fa-money-bill-trend-up stat-icon"></i>
+        <div class="stat-header">Total Net Profit (Today)</div>
+        <div class="stat-count">₱{{ number_format($combinedProfit, 2) }}</div>
     </div>
 
     <div class="stat-card yellow">
         <i class="fa-solid fa-arrow-trend-up stat-icon"></i>
-        <div class="stat-header">Total Sold</div>
+        <div class="stat-header">Total Item Sold</div>
         <div class="stat-count" id="total-sold">{{ $totalSoldQty }}</div>
         <a href="#" onclick="openSoldModal()" class="details-link">Show Details</a>
     </div>
@@ -1176,7 +1182,15 @@ tr.highlight-row {
                                                 <div><strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}</div>
                                             </div>
                                             <div>
-                                                <div><strong>Discount:</strong> ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}</div>
+                                               <div>
+                                                    <strong>Discount:</strong>
+                                                    @if ($items->first()->sale->discount_type === 'PWD' || $items->first()->sale->discount_type === 'SENIOR')
+                                                        20% (₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }})
+                                                    @else
+                                                        ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}
+                                                    @endif
+                                                </div>
+
                                                 <div><strong>Total:</strong> ₱{{ number_format($items->first()->sale->total_price, 2) }}</div>
                                             </div>
                                             <button class="toggle-btn button-fill-sm" data-target="sale-{{ $saleId }}">

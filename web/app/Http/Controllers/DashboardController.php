@@ -30,7 +30,34 @@ class DashboardController extends Controller
         ->sum(fn($sale) => $sale->total_price ?? 0);
         $totalSoldQty = SalesItem::whereDate('created_at', $today)->sum('quantity');
 
-       
+    $totalCombinedProfit = 0;
+
+    foreach ($todaySales->groupBy('sale_id') as $saleItems) {
+    $sale = $saleItems->first()->sale;
+    $saleProfit = 0;
+
+    foreach ($saleItems as $item) {
+        $product = $item->product;
+        if (!$product || !$sale) continue;
+
+        $selling = $product->selling_price;
+        $cost = $product->supplier_price;
+        $qty = $item->quantity;
+
+        $saleProfit += ($selling - $cost) * $qty;
+    }
+
+    // Subtract discount ONCE per sale
+    $saleProfit -= $sale->discount_amount ?? 0;
+
+    $totalCombinedProfit += $saleProfit;
+}
+
+    // ✅ Final clean assignment
+    $combinedProfit = $totalCombinedProfit;
+
+
+
         $soldDetails = $todaySales
             ->groupBy('product_id')
             ->map(function ($group) {
@@ -55,6 +82,7 @@ class DashboardController extends Controller
             'totalSoldQty',
             'soldDetails',
             'lowStock',
+            'combinedProfit',
             'products'
         ));
     }
