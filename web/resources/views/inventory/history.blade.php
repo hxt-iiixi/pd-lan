@@ -63,8 +63,10 @@
     <div class="history-card">
         <div class="summary-row">
             <div><strong>{{ $day['date'] }}</strong></div>
-            <div>Total Sold: {{ $day['totalSold'] }}</div>
-            <div>Total Profit: ₱{{ number_format($day['totalProfit'], 2) }}</div>
+            <div>Total Items Sold: {{ $day['totalSold'] }}</div>
+           <div>Total Sales: ₱{{ number_format($day['grossProfit'], 2) }}</div>
+            <div>Net Profit: ₱{{ number_format($day['totalProfit'], 2) }}</div>
+
             <button class="toggle-btn" onclick="toggleDetails('{{ $day['date'] }}')">Show Details</button>
         </div>
 
