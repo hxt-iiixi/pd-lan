@@ -1374,7 +1374,7 @@ tr.highlight-row {
                     <label for="product">Product</label>
                     <select name="product_ids[]" class="form-control" required>
                     @foreach ($products as $product)
-                        <option value="{{ $product->id }}">{{ $product->name }}</option>
+                       <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->brand }})</option>
                     @endforeach
                     </select>
                 </div>
