@@ -313,5 +313,15 @@ public function update(Request $request)
     ]);
 }
 
+public function getSummary(Sale $sale)
+{
+    return response()->json([
+        'sale_id' => $sale->id,
+        'discount_amount' => number_format($sale->discount_amount ?? 0, 2),
+        'discount_type' => $sale->discount_type,
+        'total_price' => number_format($sale->total_price ?? 0, 2),
+    ]);
+}
+
 
 }

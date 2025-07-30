@@ -98,4 +98,7 @@ Route::get('/inventory/history', [InventoryController::class, 'salesHistory'])
     ->middleware('auth')
     ->name('inventory.history');
 
+Route::get('/products/{product}/price', [ProductController::class, 'getPrice']);
+Route::get('/sales/{sale}/summary', [SaleController::class, 'getSummary']);
+Route::put('/products/{product}', [ProductController::class, 'update'])->name('product.update');
 

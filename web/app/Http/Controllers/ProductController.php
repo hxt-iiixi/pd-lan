@@ -88,6 +88,16 @@ class ProductController extends Controller
             'message' => 'Product updated successfully!',
             'product' => $product,
         ]);
+         $request->validate([
+        'selling_price' => 'required|numeric|min:0',
+        // ... other validations
+        ]);
+
+        $product->update([
+            'selling_price' => $request->selling_price,
+            // ... update other fields if needed
+        ]);
+          return redirect()->route('dashboard.index')->with('success', 'Product price updated successfully.');
     }
 
     public function destroy($id)
@@ -114,4 +124,15 @@ class ProductController extends Controller
 
         return response()->json(['message' => 'Product restored successfully!']);
     }
+        public function getPrice(Product $product)
+        {
+            return response()->json([
+                'id' => $product->id,
+                'name' => $product->name,
+                'brand' => $product->brand,
+                'price' => number_format($product->selling_price, 2),
+            ]);
+        }
+
+
 }

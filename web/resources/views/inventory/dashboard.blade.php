@@ -116,6 +116,38 @@ h1, h2, h3, .stat-header, .stat-count {
     color: #2563eb;
 }
 
+.searchable-dropdown {
+  position: relative;
+}
+
+.search-results-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  z-index: 9999;
+  border: 1px solid #cbd5e1;
+  border-radius: 0 0 10px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.search-result-item {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background-color: #f1f5f9;
+}
+
+.no-result {
+  padding: 8px 12px;
+  color: #9ca3af;
+  font-style: italic;
+}
 
 
 .stat-icon {
@@ -279,6 +311,16 @@ tr.highlight-row {
     transition: all 0.3s ease;
     font-family: 'Lexend', sans-serif;
     background-color: transparent;
+}
+
+.blue-button {
+    color: #00b7ffff;
+    border: 2px solid #006effff;
+    background-color: white;
+}
+.blue-button:hover {
+    background-color: #006effff;
+    color: white;
 }
 .green-button {
     color: #059669;
@@ -555,6 +597,7 @@ tr.highlight-row {
     .sale-header .right {
         text-align: right;
     }
+
 /* ===============================
    TOAST MESSAGE
 ================================ */
@@ -1174,40 +1217,58 @@ tr.highlight-row {
                             @endphp
 
                            @foreach($todaySales->groupBy('sale_id') as $saleId => $items)
-                                <tr class="bg-light">
+                              <tr class="bg-light">
                                     <td colspan="6" class="p-3">
-                                        <div class="sale-header d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <div><strong>Sale ID:</strong> {{ $saleId }}</div>
-                                                <div><strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}</div>
-                                            </div>
-                                            <div>
-                                               <div>
-                                                    <strong>Discount:</strong>
-                                                    @if ($items->first()->sale->discount_type === 'PWD' || $items->first()->sale->discount_type === 'SENIOR')
-                                                        20% (₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }})
-                                                    @else
-                                                        ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}
-                                                    @endif
+                                        <div class="sale-header">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                <div class="d-flex flex-wrap gap-4">
+                                                    <div><strong>Sale ID:</strong> {{ $saleId }}</div>
+                                                    <div>
+                                                        <strong>Discount:</strong>
+                                                        <span id="discount-{{ $saleId }}">
+                                                            @if ($items->first()->sale->discount_type === 'PWD' || $items->first()->sale->discount_type === 'SENIOR')
+                                                                20% (₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }})
+                                                            @else
+                                                                ₱{{ number_format($items->first()->sale->discount_amount ?? 0, 2) }}
+                                                            @endif
+                                                        </span>
+                                                    </div>
                                                 </div>
-
-                                                <div><strong>Total:</strong> ₱{{ number_format($items->first()->sale->total_price, 2) }}</div>
+                                                <div>
+                                                    <button class="toggle-btn button-fill-sm" data-target="sale-{{ $saleId }}">
+                                                        Hide Items
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <button class="toggle-btn button-fill-sm" data-target="sale-{{ $saleId }}">
-                                                Hide Items
-                                            </button>
+
+                                            <div class="d-flex justify-content-between mt-2 flex-wrap">
+                                                <div><strong>Date:</strong> {{ $items->first()->created_at->format('M d, Y h:i A') }}</div>
+                                                <div>
+                                                    <strong>Total:</strong>
+                                                    <span id="total-{{ $saleId }}">
+                                                        ₱{{ number_format($items->first()->sale->total_price, 2) }}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
+
 
                                 <tbody id="sale-{{ $saleId }}" class="sale-items animate-expand show">
                                     @foreach ($items as $item)
                                         <tr>
                                             <td>{{ $item->created_at->format('h:i A') }}</td>
-                                            <td>{{ $item->product->name }} (₱{{ number_format($item->product->selling_price, 2) }})</td>
+                                           <td id="price-{{ $item->product->id }}">
+                                                {{ $item->product->name }} ({{ $item->product->brand }}) = ₱{{ number_format($item->product->selling_price, 2) }}
+                                            </td>
+
                                             <td>{{ $item->quantity }}</td>
                                             <td>—</td>
-                                            <td>₱{{ number_format($item->total_price, 2) }}</td>
+                                            <td id="item-total-{{ $item->id }}">
+                                                ₱{{ number_format($item->quantity * $item->product->selling_price, 2) }}
+                                            </td>
+
                                             <td>
                                                 <button 
                                                     class="button-fill green-button"
@@ -1216,6 +1277,7 @@ tr.highlight-row {
                                                     Edit
                                                 </button>
                                             </td>
+                                            
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -1334,6 +1396,7 @@ tr.highlight-row {
 
         <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
             <button type="submit" class="button-fill green-button btn-update-sale">Update Sale</button>
+              <button type="submit" class="button-fill blue-button btn-update-sale">Refresh</button>
             <button type="button" class="button-fill delete-button" onclick="openDeleteConfirmModal()">Delete</button>
         </div>
 
@@ -1372,11 +1435,12 @@ tr.highlight-row {
                 <div class="item-group mb-3 border rounded p-3">
                 <div class="form-group mb-2">
                     <label for="product">Product</label>
-                    <select name="product_ids[]" class="form-control" required>
-                    @foreach ($products as $product)
-                       <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->brand }})</option>
-                    @endforeach
-                    </select>
+                    <div class="searchable-dropdown">
+                        <input type="text" class="product-search-input form-control" placeholder="Type at least 3 letters..." autocomplete="off" />
+                        <input type="hidden" name="product_ids[]" class="product-id-hidden" />
+                        <div class="search-results-list"></div>
+                    </div>
+
                 </div>
                 <div class="form-group mb-2">
                     <label for="quantity">Quantity</label>
@@ -1405,7 +1469,109 @@ tr.highlight-row {
     </div>
   </div>
 </div>
+<script>
+function updateDashboardPrice(productId) {
+    fetch(`/products/${productId}/price`)
+        .then(res => res.json())
+        .then(data => {
+            const priceCell = document.getElementById(`price-${data.id}`);
+            if (priceCell) {
+                priceCell.innerHTML = `${data.name} (${data.brand}) = ₱${data.price}`;
+            }
+        })
+        .catch(err => console.error("Price update failed:", err));
+}
+function updateSaleSummary(saleId) {
+    fetch(`/sales/${saleId}/summary`)
+        .then(res => res.json())
+        .then(data => {
+            const discountSpan = document.getElementById(`discount-${data.sale_id}`);
+            const totalSpan = document.getElementById(`total-${data.sale_id}`);
 
+            if (discountSpan) {
+                if (data.discount_type === 'PWD' || data.discount_type === 'SENIOR') {
+                    discountSpan.innerText = `20% (₱${data.discount_amount})`;
+                } else {
+                    discountSpan.innerText = `₱${data.discount_amount}`;
+                }
+            }
+
+            if (totalSpan) {
+                totalSpan.innerText = data.total_price;
+            }
+        })
+        .catch(err => console.error("Sale summary update failed:", err));
+}
+function updateItemTotal(saleItemId, productId, quantity) {
+    fetch(`/products/${productId}/price`)
+        .then(res => res.json())
+        .then(data => {
+            const totalCell = document.getElementById(`item-total-${saleItemId}`);
+            if (totalCell) {
+                const computedTotal = (parseFloat(data.price.replace(',', '')) * quantity).toFixed(2);
+                totalCell.textContent = `₱${computedTotal}`;
+            }
+        });
+}
+
+</script>
+
+</script>
+<script>
+    const products = @json($products->map(fn($p) => [
+    'id' => $p->id,
+    'label' => $p->name . ' (' . $p->brand . ')'
+    ]));
+
+    function initSearchableDropdown(container) {
+    const input = container.querySelector('.product-search-input');
+    const hiddenInput = container.querySelector('.product-id-hidden');
+    const results = container.querySelector('.search-results-list');
+
+    input.addEventListener('input', () => {
+        const query = input.value.trim().toLowerCase();
+        results.innerHTML = '';
+
+        if (query.length < 1) {
+        results.style.display = 'none';
+        return;
+        }
+
+        const matches = products.filter(p => p.label.toLowerCase().includes(query));
+
+        if (matches.length === 0) {
+        results.innerHTML = '<div class="no-result">No matches</div>';
+        } else {
+        matches.forEach(p => {
+            const option = document.createElement('div');
+            option.textContent = p.label;
+            option.className = 'search-result-item';
+            option.addEventListener('click', () => {
+            input.value = p.label;
+            hiddenInput.value = p.id;
+            results.style.display = 'none';
+            });
+            results.appendChild(option);
+        });
+        }
+
+        results.style.display = 'block';
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => (results.style.display = 'none'), 200);
+    });
+    }
+
+    // Initialize all dropdowns on page load (including dynamically added ones)
+    function initAllSearchDropdowns() {
+    document.querySelectorAll('.searchable-dropdown').forEach(initSearchableDropdown);
+    }
+
+    document.addEventListener('DOMContentLoaded', initAllSearchDropdowns);
+    document.getElementById('add-item').addEventListener('click', () => {
+    setTimeout(() => initAllSearchDropdowns(), 100); // Re-init after clone
+    });
 </script>
 
 
@@ -1428,65 +1594,36 @@ tr.highlight-row {
 
 </script>
 <script>
-    document.getElementById('add-item').addEventListener('click', function () {
-        const container = document.getElementById('items-container');
-        const firstItem = container.querySelector('.item-group');
-        const clone = firstItem.cloneNode(true);
+document.getElementById('add-item').addEventListener('click', function () {
+    const container = document.getElementById('items-container');
+    const firstItem = container.querySelector('.item-group');
+    const clone = firstItem.cloneNode(true);
 
-        // Clear inputs
-        clone.querySelector('select').selectedIndex = 0;
-        clone.querySelector('input').value = 1;
+    // Reset fields
+    const input = clone.querySelector('input[type="text"]');
+    if (input) input.value = '';
+    const hidden = clone.querySelector('input[type="hidden"]');
+    if (hidden) hidden.value = '';
+    const quantity = clone.querySelector('input[type="number"]');
+    if (quantity) quantity.value = 1;
 
-        container.appendChild(clone);
-    });
-
-    document.getElementById('items-container').addEventListener('click', function (e) {
-        if (e.target.classList.contains('remove-item')) {
-            const items = document.querySelectorAll('.item-group');
-            if (items.length > 1) {
-                e.target.closest('.item-group').remove();
-            }
+    container.appendChild(clone);
+    initSearchableDropdown(clone); // reinitialize dropdown if using custom dropdown logic
+});
+document.getElementById('items-container').addEventListener('click', function (e) {
+    if (e.target.classList.contains('remove-item')) {
+        const items = document.querySelectorAll('.item-group');
+        if (items.length > 1) {
+            e.target.closest('.item-group').remove();
         }
-    });
+    }
+});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<script>
-    let itemIndex = 1; // Start from 1 if the first item is static
 
-    function addSaleItem() {
-        const container = document.getElementById('itemRows');
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'card mb-3 shadow-sm p-4 bg-white rounded border-0 position-relative';
-        wrapper.innerHTML = `
-            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()">
-                <i class="bi bi-x"></i>
-            </button>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Product</label>
-                    <select class="form-select" name="items[${itemIndex}][product_id]" required>
-                        @foreach($products as $product)
-                            <option value="{{ $product->id }}">
-                                {{ $product->name }} {{ $product->dosage }} (₱{{ number_format($product->selling_price, 2) }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Quantity</label>
-                    <input type="number" class="form-control" name="items[${itemIndex}][quantity]" min="1" value="1" required>
-                </div>
-            </div>
-        `;
-
-        container.appendChild(wrapper);
-        itemIndex++;
-    }
-</script>
 
 
 
